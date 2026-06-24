@@ -1,0 +1,406 @@
+.seller-dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.dashboard-header h1 {
+  font-size: 32px;
+  color: #333;
+  margin: 0;
+}
+
+.dashboard-actions {
+  display: flex;
+  gap: 15px;
+}
+
+.btn-primary, .btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s;
+}
+
+.btn-primary {
+  background: #4CAF50;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #45a049;
+  transform: translateY(-2px);
+}
+
+.btn-secondary {
+  background: #2196F3;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #0b7dda;
+  transform: translateY(-2px);
+}
+
+.verification-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+}
+
+.verification-card.verified {
+  background: #d4edda;
+  border: 1px solid #c3e6cb;
+}
+
+.verification-card.pending {
+  background: #fff3cd;
+  border: 1px solid #ffeeba;
+}
+
+.verification-card.unverified, .verification-card.rejected {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+}
+
+.verification-icon {
+  font-size: 40px;
+}
+
+.verification-card.verified .verification-icon {
+  color: #155724;
+}
+
+.verification-card.pending .verification-icon {
+  color: #856404;
+}
+
+.verification-card.unverified .verification-icon,
+.verification-card.rejected .verification-icon {
+  color: #721c24;
+}
+
+.verification-content h3 {
+  margin: 0 0 5px 0;
+  font-size: 20px;
+}
+
+.verification-content p {
+  margin: 0 0 10px 0;
+  color: #666;
+}
+
+.verification-link {
+  display: inline-block;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.warning-alert {
+  background: #fff3cd;
+  border-left: 4px solid #ff9800;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.warning-alert svg {
+  color: #ff9800;
+  font-size: 24px;
+}
+
+.warning-alert div {
+  flex: 1;
+}
+
+.listings-section {
+  margin-bottom: 40px;
+}
+
+.listings-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 24px;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+.listings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.listing-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.listing-warning {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 152, 0, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 1;
+}
+
+.listing-image {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+}
+
+.listing-info {
+  padding: 15px;
+}
+
+.listing-info h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+}
+
+.listing-price {
+  font-size: 20px;
+  font-weight: bold;
+  color: #4CAF50;
+  margin: 8px 0;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.available {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.sold, .status-badge.rented {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: #f9f9f9;
+  border-radius: 12px;
+  color: #999;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #4CAF50;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .dashboard-actions {
+    flex-direction: column;
+  }
+  
+  .btn-primary, .btn-secondary {
+    justify-content: center;
+  }
+  
+  .listings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* Add these styles to your existing SellerDashboard.css */
+
+.listing-details {
+  display: flex;
+  gap: 12px;
+  margin: 8px 0;
+  font-size: 13px;
+  color: #666;
+}
+
+.listing-type,
+.vehicle-type {
+  text-transform: capitalize;
+  background: #f0f0f0;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.listing-age,
+.vehicle-capacity {
+  color: #666;
+}
+
+.listing-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.listing-date {
+  font-size: 11px;
+  color: #999;
+}
+
+.price-period {
+  font-size: 12px;
+  font-weight: normal;
+  color: #666;
+}
+
+/* Improved listing card styles */
+.listing-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
+  position: relative;
+}
+
+.listing-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.listing-warning {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 152, 0, 0.9);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  z-index: 1;
+  backdrop-filter: blur(4px);
+}
+
+.listing-image {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+}
+
+.listing-info {
+  padding: 15px;
+}
+
+.listing-info h3 {
+  margin: 0 0 5px 0;
+  font-size: 18px;
+  color: #333;
+}
+
+.listing-price {
+  font-size: 20px;
+  font-weight: bold;
+  color: #4CAF50;
+  margin: 10px 0;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-badge.available {
+  background: #d4edda;
+  color: #155724;
+}
+
+.status-badge.sold,
+.status-badge.rented {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  background: #f9f9f9;
+  border-radius: 12px;
+  color: #999;
+}
+
+.empty-state-btn {
+  display: inline-block;
+  margin-top: 15px;
+  padding: 10px 20px;
+  background: #4CAF50;
+  color: white;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background 0.3s;
+}
+
+.empty-state-btn:hover {
+  background: #45a049;
+}

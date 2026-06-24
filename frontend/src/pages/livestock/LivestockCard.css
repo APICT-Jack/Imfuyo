@@ -1,0 +1,424 @@
+/* LivestockCard.css - Ultra Compact, Image-First Design */
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap');
+
+.livestock-card-compact {
+  position: relative;
+  background: white;
+  border-radius: 14px;
+  overflow: hidden;
+  transition: all 0.25s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.03);
+  cursor: pointer;
+}
+
+.livestock-card-compact:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+}
+
+.card-link-compact {
+  text-decoration: none;
+  color: inherit;
+  display: block;
+}
+
+/* ========== IMAGE SECTION - DOMINANT & COMPACT ========== */
+.card-image-compact {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 0.85;
+  overflow: hidden;
+  background: #f0f2f5;
+}
+
+.card-image-compact img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.livestock-card-compact:hover .card-image-compact img {
+  transform: scale(1.03);
+}
+
+.no-image-compact {
+  width: 100%;
+  height: 100%;
+  display: flex;
+ align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  color: #aaa;
+}
+
+/* Image Badges - Top Left */
+.image-badges {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  display: flex;
+  gap: 6px;
+  z-index: 3;
+}
+
+.badge-warning,
+.badge-verified,
+.badge-video,
+.badge-gallery {
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  padding: 3px 6px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: white;
+}
+
+.badge-warning { background: rgba(220, 53, 69, 0.9); }
+.badge-verified { background: rgba(40, 167, 69, 0.9); }
+.badge-video, .badge-gallery { background: rgba(0,0,0,0.6); }
+
+/* Status Badge - Bottom Right */
+.status-badge-compact {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: white;
+  text-transform: uppercase;
+  z-index: 3;
+  backdrop-filter: blur(2px);
+}
+
+/* Order Badge - Top Right */
+.order-badge-compact {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(4px);
+  padding: 4px 7px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  color: white;
+  z-index: 3;
+}
+
+/* ========== HOVER OVERLAY - Reveals on Desktop Hover ========== */
+.hover-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.75) 100%);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s ease;
+  z-index: 10;
+  padding: 12px;
+}
+
+.livestock-card-compact:hover .hover-overlay {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hover-content {
+  color: white;
+  width: 100%;
+  max-height: 100%;
+  overflow-y: auto;
+  font-size: 0.75rem;
+}
+
+.hover-description {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  margin-bottom: 10px;
+  opacity: 0.95;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.hover-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 0.7rem;
+}
+
+.hover-detail-item {
+  background: rgba(255,255,255,0.15);
+  padding: 3px 8px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.hover-seller {
+  font-size: 0.7rem;
+  padding: 6px 0;
+  border-top: 1px solid rgba(255,255,255,0.2);
+  margin-bottom: 10px;
+  opacity: 0.8;
+}
+
+.hover-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.hover-action-btn {
+  background: rgba(255,255,255,0.15);
+  border: none;
+  padding: 6px 10px;
+  border-radius: 30px;
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.hover-action-btn:hover {
+  background: #4CAF50;
+  transform: translateY(-1px);
+}
+
+.hover-action-btn.like-btn.liked {
+  background: #dc3545;
+  color: white;
+}
+
+/* ========== COMPACT INFO SECTION - ALWAYS VISIBLE ========== */
+.card-info-compact {
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+}
+
+.card-title-compact {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1a2634;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.type-badge-compact {
+  font-size: 0.65rem;
+  background: #eef2ff;
+  padding: 2px 8px;
+  border-radius: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #2c5f2d;
+  white-space: nowrap;
+}
+
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.price-compact {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #2e7d32;
+}
+
+.time-compact,
+.bid-count-compact {
+  font-size: 0.65rem;
+  color: #ff9800;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #fff3e0;
+  padding: 2px 6px;
+  border-radius: 20px;
+}
+
+.location-compact {
+  font-size: 0.65rem;
+  color: #6c86a3;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ========== MOBILE EXPANDABLE SECTION ========== */
+.mobile-expandable {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+  background: #f8f9fc;
+  border-top: 1px solid #edf2f7;
+}
+
+.livestock-card-compact.expanded .mobile-expandable {
+  max-height: 400px;
+}
+
+.mobile-details {
+  padding: 12px;
+}
+
+.mobile-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mobile-detail {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #6c757d;
+}
+
+.detail-value {
+  color: #1a2634;
+}
+
+.mobile-description {
+  font-size: 0.75rem;
+  color: #5a6874;
+  line-height: 1.4;
+  margin-bottom: 12px;
+  padding-top: 8px;
+  border-top: 1px solid #e9ecef;
+}
+
+.mobile-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mobile-action-btn {
+  flex: 1;
+  background: white;
+  border: 1px solid #dee2e6;
+  padding: 8px 12px;
+  border-radius: 30px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #495057;
+}
+
+.mobile-action-btn:hover,
+.mobile-action-btn:active {
+  background: #4CAF50;
+  border-color: #4CAF50;
+  color: white;
+}
+
+.mobile-action-btn.liked {
+  background: #dc3545;
+  border-color: #dc3545;
+  color: white;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (min-width: 769px) {
+  .mobile-expandable {
+    display: none;
+  }
+  
+  .livestock-card-compact.expanded .mobile-expandable {
+    max-height: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .hover-overlay {
+    display: none;
+  }
+  
+  .card-image-compact {
+    aspect-ratio: 1 / 0.9;
+  }
+  
+  .card-info-compact {
+    padding: 8px 10px;
+  }
+  
+  .card-title-compact {
+    font-size: 0.8rem;
+  }
+  
+  .price-compact {
+    font-size: 0.95rem;
+  }
+}
+
+/* Card variations */
+.livestock-card-compact.sold-card {
+  opacity: 0.75;
+}
+
+.livestock-card-compact.on-bid-card .price-compact {
+  color: #ff9800;
+}
+
+/* Smooth scrolling for hover content */
+.hover-content::-webkit-scrollbar {
+  width: 3px;
+}
+
+.hover-content::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+}
+
+.hover-content::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.3);
+  border-radius: 10px;
+}

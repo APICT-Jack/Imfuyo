@@ -1,0 +1,69 @@
+.settings-page {
+  padding: 20px;
+}
+
+.settings-section {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+}
+
+.settings-section h2 {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 20px;
+}
+
+.settings-form {
+  max-width: 500px;
+}
+
+.settings-form .form-group {
+  margin-bottom: 20px;
+}
+
+.settings-form label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #555;
+}
+
+.settings-form input[type="text"],
+.settings-form input[type="email"],
+.settings-form select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.settings-form input[type="checkbox"] {
+  width: auto;
+  margin-right: 10px;
+}
+
+.settings-form select[multiple] {
+  height: 100px;
+}
+
+.settings-actions {
+  text-align: right;
+}
+
+.save-btn {
+  padding: 12px 30px;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.save-btn:hover {
+  background: #45a049;
+}

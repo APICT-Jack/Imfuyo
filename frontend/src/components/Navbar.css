@@ -1,0 +1,316 @@
+/* Navbar.css - macOS/iOS Style */
+.navbar-macos {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.navbar-container-macos {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.navbar-logo-macos {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cow-icon-macos {
+  font-size: 28px;
+  color: #34c759;
+}
+
+.navbar-logo-macos span {
+  background: linear-gradient(135deg, #007aff, #34c759);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.search-bar-macos-nav {
+  flex: 1;
+  max-width: 400px;
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  padding: 8px 16px;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.search-bar-macos-nav:focus-within {
+  background: rgba(0, 0, 0, 0.08);
+  box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.2);
+}
+
+.search-icon-macos {
+  color: #8e8e93;
+  font-size: 14px;
+}
+
+.search-bar-macos-nav input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14px;
+}
+
+.search-shortcut-macos {
+  font-size: 11px;
+  color: #8e8e93;
+  background: rgba(0, 0, 0, 0.05);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.navbar-mobile-toggle-macos {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #1c1c1e;
+}
+
+.navbar-menu-macos {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.navbar-link-macos {
+  text-decoration: none;
+  color: #1c1c1e;
+  font-weight: 500;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.navbar-link-macos:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.bg-settings-btn-macos-nav {
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #007aff;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.bg-settings-btn-macos-nav:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.navbar-user-macos {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.navbar-user-name-macos {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  color: #1c1c1e;
+}
+
+.sell-btn-macos-nav {
+  background: #007aff;
+  color: white;
+  padding: 8px 20px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.sell-btn-macos-nav:hover {
+  background: #0051d5;
+  transform: scale(0.98);
+}
+
+.navbar-logout-btn-macos {
+  background: transparent;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #ff3b30;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.navbar-logout-btn-macos:hover {
+  background: rgba(255, 59, 48, 0.1);
+}
+
+/* Background Panel */
+.bg-panel-macos-nav {
+  position: absolute;
+  top: 70px;
+  right: 24px;
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(20px);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  width: 320px;
+  z-index: 200;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.bg-panel-header-macos {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.bg-panel-header-macos h3 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.close-panel-macos {
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #8e8e93;
+}
+
+.bg-options-macos-nav {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.upload-label-macos-nav {
+  background: rgba(0, 0, 0, 0.05);
+  padding: 10px;
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.url-input-group-macos {
+  display: flex;
+  gap: 8px;
+}
+
+.bg-url-input-macos-nav {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  font-size: 14px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.apply-bg-btn-macos-nav, .remove-bg-btn-macos-nav {
+  padding: 10px 16px;
+  border-radius: 10px;
+  border: none;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.apply-bg-btn-macos-nav {
+  background: #007aff;
+  color: white;
+}
+
+.remove-bg-btn-macos-nav {
+  background: #ff3b30;
+  color: white;
+}
+
+/* Mobile Overlay */
+.mobile-overlay-macos {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 98;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navbar-mobile-toggle-macos {
+    display: block;
+  }
+  
+  .search-bar-macos-nav {
+    display: none;
+  }
+  
+  .navbar-menu-macos {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 80%;
+    max-width: 320px;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(20px);
+    flex-direction: column;
+    align-items: stretch;
+    padding: 80px 24px 24px;
+    transition: right 0.3s ease;
+    z-index: 99;
+    gap: 16px;
+  }
+  
+  .navbar-menu-macos.active {
+    right: 0;
+  }
+  
+  .navbar-user-macos {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .bg-panel-macos-nav {
+    position: fixed;
+    top: auto;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    width: auto;
+  }
+}
