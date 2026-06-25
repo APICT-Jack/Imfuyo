@@ -1,4 +1,4 @@
-// HomePage.jsx - Updated with LivestockCard and VehicleCard integration
+// HomePage.jsx - Updated with environment variables for API URLs
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -48,6 +48,9 @@ const DEFAULT_BG = "https://images.pexels.com/photos/4825704/beautiful-shot-of-c
 
 // Slideshow interval in milliseconds (5 seconds)
 const SLIDESHOW_INTERVAL = 5000;
+
+// API Base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const HomePage = () => {
   const { isAuthenticated, user } = useAuth();
@@ -105,7 +108,7 @@ const HomePage = () => {
   useEffect(() => {
     const fetchLivestock = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/livestock?limit=6');
+        const response = await axios.get(`${API_BASE_URL}/livestock?limit=6`);
         const livestockData = response.data.livestock || [];
         setLivestock(livestockData);
         
@@ -134,7 +137,7 @@ const HomePage = () => {
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/vehicles?limit=3');
+        const response = await axios.get(`${API_BASE_URL}/vehicles?limit=3`);
         const vehiclesData = response.data.vehicles || [];
         setVehicles(vehiclesData);
         setStats(prev => ({
@@ -195,8 +198,6 @@ const HomePage = () => {
           <p className="hero-subtitle-compact">
             South Africa's premier platform for livestock trading and agricultural transport
           </p>
-          
-          
           
           <div className="hero-buttons-compact">
             <Link to="/livestock" className="btn-primary-compact">

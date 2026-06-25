@@ -1,4 +1,4 @@
-// LivestockDetail.jsx - Cleaned with no mock data
+// LivestockDetail.jsx - Updated with environment variables and error handling
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -10,10 +10,13 @@ import {
   FaWhatsapp, FaRegHeart, FaHeart as FaHeartSolid, FaShareAlt,
   FaUserCheck, FaUserShield, FaStar, FaStarHalfAlt, FaRegStar,
   FaChevronLeft, FaChevronRight, FaExpand, FaTimes, FaCheck,
-  FaClock, FaTag, FaStore, FaIdCard
+  FaClock, FaTag, FaStore, FaIdCard, FaSpinner
 } from 'react-icons/fa';
 import SidePanel from '.././SidePanel';
 import './LivestockDetail.css';
+
+// API Base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const LivestockDetail = () => {
   const { id } = useParams();
@@ -24,6 +27,7 @@ const LivestockDetail = () => {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [vehicles, setVehicles] = useState([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(false);
   const [searchMessage, setSearchMessage] = useState(null);
@@ -31,6 +35,8 @@ const LivestockDetail = () => {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
   const [showContactOptions, setShowContactOptions] = useState(false);
+  const [imageErrors, setImageErrors] = useState({});
+  const [imageLoading, setImageLoading] = useState({});
   
   const galleryRef = useRef(null);
   const detailRef = useRef(null);
@@ -49,22 +55,28 @@ const LivestockDetail = () => {
   const fetchLivestock = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:5000/api/livestock/${id}`);
+      const response = await axios.get(`${API_BASE_URL}/livestock/${id}`);
       setLivestock(response.data);
       setError(null);
     } catch (error) {
       console.error('Error fetching livestock:', error);
-      setError('Failed to load livestock details');
+      if (error.response?.status === 404) {
+        setError('Livestock listing not found');
+      } else {
+        setError('Failed to load livestock details. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const fetchNearbyVehicles = async () => {
+    if (!livestock?.location) return;
+    
     setVehiclesLoading(true);
     setSearchMessage(null);
     try {
-      const response = await axios.get(`http://localhost:5000/api/livestock/nearby/vehicles`, {
+      const response = await axios.get(`${API_BASE_URL}/livestock/nearby/vehicles`, {
         params: {
           location: livestock.location,
           limit: 5
@@ -83,6 +95,7 @@ const LivestockDetail = () => {
   };
 
   const formatZARPrice = (price) => {
+    if (!price) return 'POA';
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
       currency: 'ZAR',
@@ -136,8 +149,8 @@ const LivestockDetail = () => {
     if (!livestock) return;
     
     const shareData = {
-      title: livestock.breed,
-      text: `Check out this ${livestock.breed} for ${formatZARPrice(livestock.price)}`,
+      title: livestock.breed || 'Livestock for sale',
+      text: `Check out this ${livestock.breed || 'livestock'} for ${formatZARPrice(livestock.price)} on Imfuyo!`,
       url: window.location.href,
     };
     
@@ -145,24 +158,70 @@ const LivestockDetail = () => {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        console.log('Error sharing:', err);
+        if (err.name !== 'AbortError') {
+          console.error('Share error:', err);
+        }
       }
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link copied to clipboard!');
+      } catch (err) {
+        console.error('Copy error:', err);
+        // Fallback
+        const input = document.createElement('input');
+        input.value = window.location.href;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        alert('Link copied to clipboard!');
+      }
     }
   };
 
-  const handleSave = () => {
-    setIsSaved(!isSaved);
-    // TODO: Implement save to backend
+  const handleSave = async () => {
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const endpoint = isSaved ? 'unlike' : 'like';
+      const response = await axios.post(
+        `${API_BASE_URL}/livestock/${livestock._id}/${endpoint}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        setIsSaved(!isSaved);
+      }
+    } catch (error) {
+      console.error('Error saving livestock:', error);
+      if (error.response?.status === 401) {
+        navigate('/login');
+      } else {
+        alert('Failed to save listing. Please try again.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleContact = (method) => {
     if (!livestock?.seller) return;
     
     if (method === 'whatsapp' && livestock.seller.phone) {
-      const message = `Hi, I'm interested in your ${livestock.breed} listed on Imfuyo for ${formatZARPrice(livestock.price)}`;
+      const message = `Hi, I'm interested in your ${livestock.breed || 'livestock'} listed on Imfuyo for ${formatZARPrice(livestock.price)}`;
       const phone = livestock.seller.phone.replace(/\D/g, '');
       window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
     } else if (method === 'call' && livestock.seller.phone) {
@@ -185,6 +244,15 @@ const LivestockDetail = () => {
     }
   };
 
+  const handleImageError = (index) => {
+    setImageErrors(prev => ({ ...prev, [index]: true }));
+    setImageLoading(prev => ({ ...prev, [index]: false }));
+  };
+
+  const handleImageLoad = (index) => {
+    setImageLoading(prev => ({ ...prev, [index]: false }));
+  };
+
   const renderStars = (rating) => {
     if (!rating) return null;
     
@@ -193,13 +261,13 @@ const LivestockDetail = () => {
     const hasHalfStar = rating % 1 >= 0.5;
     
     for (let i = 0; i < fullStars; i++) {
-      stars.push(<FaStar key={i} />);
+      stars.push(<FaStar key={i} color="#FFD700" />);
     }
     if (hasHalfStar) {
-      stars.push(<FaStarHalfAlt key="half" />);
+      stars.push(<FaStarHalfAlt key="half" color="#FFD700" />);
     }
     while (stars.length < 5) {
-      stars.push(<FaRegStar key={stars.length} />);
+      stars.push(<FaRegStar key={stars.length} color="#FFD700" />);
     }
     return stars;
   };
@@ -229,6 +297,7 @@ const LivestockDetail = () => {
   const isSellerVerified = livestock.seller?.isVerified || false;
   const sellerRating = livestock.seller?.rating;
   const hasMultipleImages = livestock.images && livestock.images.length > 1;
+  const displayImages = livestock.images?.filter((_, idx) => !imageErrors[idx]) || [];
 
   return (
     <div className="ld_page">
@@ -238,8 +307,13 @@ const LivestockDetail = () => {
           <FaArrowLeft />
         </button>
         <div className="ld_header_actions">
-          <button className="ld_header_action" onClick={handleSave} aria-label="Save listing">
-            {isSaved ? <FaHeartSolid className="ld_saved" /> : <FaRegHeart />}
+          <button 
+            className="ld_header_action" 
+            onClick={handleSave} 
+            aria-label="Save listing"
+            disabled={isSaving}
+          >
+            {isSaving ? <FaSpinner className="spinner" /> : (isSaved ? <FaHeartSolid className="ld_saved" /> : <FaRegHeart />)}
           </button>
           <button className="ld_header_action" onClick={handleShare} aria-label="Share listing">
             <FaShareAlt />
@@ -250,12 +324,30 @@ const LivestockDetail = () => {
       {/* Image Gallery */}
       <div className="ld_gallery" ref={galleryRef}>
         <div className="ld_gallery_main" onClick={() => setIsLightboxOpen(true)}>
-          <img 
-            src={livestock.images?.[selectedImage] || '/api/placeholder/600/400'} 
-            alt={livestock.breed || 'Livestock'}
-            className="ld_gallery_image"
-          />
-          {hasMultipleImages && (
+          {displayImages.length > 0 ? (
+            <>
+              {imageLoading[selectedImage] !== false && (
+                <div className="ld_image_loader">
+                  <FaSpinner className="spinner" />
+                </div>
+              )}
+              <img 
+                src={displayImages[selectedImage]} 
+                alt={livestock.breed || 'Livestock'}
+                className="ld_gallery_image"
+                onError={() => handleImageError(selectedImage)}
+                onLoad={() => handleImageLoad(selectedImage)}
+                style={{ display: imageLoading[selectedImage] === false ? 'block' : 'none' }}
+              />
+            </>
+          ) : (
+            <div className="ld_gallery_placeholder">
+              <div className="ld_placeholder_icon">🐄</div>
+              <p>No image available</p>
+            </div>
+          )}
+          
+          {hasMultipleImages && displayImages.length > 1 && (
             <>
               <button className="ld_gallery_nav ld_gallery_prev" onClick={(e) => { e.stopPropagation(); prevImage(); }}>
                 <FaChevronLeft />
@@ -264,7 +356,7 @@ const LivestockDetail = () => {
                 <FaChevronRight />
               </button>
               <div className="ld_gallery_counter">
-                {selectedImage + 1} / {livestock.images.length}
+                {selectedImage + 1} / {displayImages.length}
               </div>
               <button className="ld_gallery_expand">
                 <FaExpand />
@@ -273,9 +365,9 @@ const LivestockDetail = () => {
           )}
         </div>
         
-        {hasMultipleImages && (
+        {hasMultipleImages && displayImages.length > 1 && (
           <div className="ld_gallery_thumbnails">
-            {livestock.images.map((img, idx) => (
+            {displayImages.map((img, idx) => (
               <div 
                 key={idx} 
                 className={`ld_thumbnail ${selectedImage === idx ? 'ld_thumbnail_active' : ''}`}
@@ -289,13 +381,13 @@ const LivestockDetail = () => {
       </div>
 
       {/* Lightbox Modal */}
-      {isLightboxOpen && (
+      {isLightboxOpen && displayImages.length > 0 && (
         <div className="ld_lightbox" onClick={() => setIsLightboxOpen(false)}>
           <button className="ld_lightbox_close" onClick={() => setIsLightboxOpen(false)}>
             <FaTimes />
           </button>
-          <img src={livestock.images?.[selectedImage]} alt={livestock.breed || 'Livestock'} className="ld_lightbox_image" />
-          {hasMultipleImages && (
+          <img src={displayImages[selectedImage]} alt={livestock.breed || 'Livestock'} className="ld_lightbox_image" />
+          {displayImages.length > 1 && (
             <>
               <button className="ld_lightbox_nav ld_lightbox_prev" onClick={(e) => { e.stopPropagation(); prevImage(); }}>
                 <FaChevronLeft />

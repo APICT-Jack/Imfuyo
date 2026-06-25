@@ -1,6 +1,10 @@
+// src/context/AuthContext.js
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+
+// Configuration - uses environment variable with fallback
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const AuthContext = createContext();
 
@@ -82,7 +86,7 @@ export const AuthProvider = ({ children }) => {
 
   const fetchUser = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/auth/profile');
+      const response = await axios.get(`${API_BASE_URL}/auth/profile`);
       const userData = response.data;
       setUser(userData);
       // Store in localStorage for persistence
@@ -98,7 +102,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/login', { email, password });
+      const response = await axios.post(`${API_BASE_URL}/auth/login`, { email, password });
       const { token: newToken, user: userData } = response.data;
       
       localStorage.setItem('token', newToken);
@@ -117,7 +121,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/register', userData);
+      const response = await axios.post(`${API_BASE_URL}/auth/register`, userData);
       const { token: newToken, user: userDataResponse } = response.data;
       
       localStorage.setItem('token', newToken);

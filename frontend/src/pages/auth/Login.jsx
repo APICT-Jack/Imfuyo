@@ -1,7 +1,9 @@
+// src/pages/Login/Login.js
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FaEnvelope, FaLock, FaSpinner } from 'react-icons/fa';
+import config from '../../config';
 import './Login.css';
 
 const Login = () => {
@@ -17,24 +19,30 @@ const Login = () => {
     setLoading(true);
     setError('');
     
-    const result = await login(email, password);
-    setLoading(false);
-    
-    if (result.success) {
-      // Redirect based on user role and verification status
-      if (result.user?.role === 'seller') {
-        if (result.user?.verificationStatus === 'pending') {
-          navigate('/seller/dashboard');
-        } else if (result.user?.verificationStatus === 'not_submitted') {
-          navigate('/seller/verify');
+    try {
+      const result = await login(email, password);
+      
+      if (result.success) {
+        // Redirect based on user role and verification status
+        if (result.user?.role === 'seller') {
+          if (result.user?.verificationStatus === 'pending') {
+            navigate('/seller/dashboard');
+          } else if (result.user?.verificationStatus === 'not_submitted') {
+            navigate('/seller/verify');
+          } else {
+            navigate('/seller/dashboard');
+          }
         } else {
-          navigate('/seller/dashboard');
+          navigate('/');
         }
       } else {
-        navigate('/');
+        setError(result.error || 'Login failed. Please check your credentials.');
       }
-    } else {
-      setError(result.error || 'Login failed. Please check your credentials.');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 

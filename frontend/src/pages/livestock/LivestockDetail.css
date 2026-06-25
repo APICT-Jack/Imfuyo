@@ -1131,3 +1131,44 @@
   background: #94a3b8;
   border-radius: 4px;
 }
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.ld_image_loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+}
+
+.ld_image_loader .spinner {
+  font-size: 2rem;
+  color: #4CAF50;
+}
+
+.ld_gallery_placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #f5f5f5;
+  color: #999;
+}
+
+.ld_placeholder_icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.ld_header_action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

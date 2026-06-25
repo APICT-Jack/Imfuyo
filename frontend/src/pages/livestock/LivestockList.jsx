@@ -1,4 +1,4 @@
-// LivestockList.jsx - Using the same LivestockCard component as HomePage
+// LivestockList.jsx - Updated with environment variables and error handling
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -14,15 +14,20 @@ import {
   FaSortAmountUp,
   FaThLarge,
   FaList,
-  FaMapMarkerAlt
+  FaMapMarkerAlt,
+  FaSpinner
 } from 'react-icons/fa';
 import { GiCow, GiChicken, GiGoat, GiSheep, GiPig } from 'react-icons/gi';
 import LivestockCard from './LivestockCard';
 import './LivestockList.css';
 
+// API Base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const LivestockList = () => {
   const [livestock, setLivestock] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
@@ -34,16 +39,18 @@ const LivestockList = () => {
   });
   const [sortBy, setSortBy] = useState('newest');
   const [searchQuery, setSearchQuery] = useState('');
+  const [totalCount, setTotalCount] = useState(0);
   
   const filterPanelRef = useRef(null);
   const sortPanelRef = useRef(null);
 
   useEffect(() => {
     fetchLivestock();
-  }, [filters, sortBy]);
+  }, [filters, sortBy, searchQuery]);
 
   const fetchLivestock = async () => {
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams();
       if (filters.type) params.append('type', filters.type);
@@ -54,20 +61,26 @@ const LivestockList = () => {
       params.append('sort', sortBy);
       params.append('limit', '20');
       
-      const response = await axios.get(`http://localhost:5000/api/livestock?${params}`);
+      const response = await axios.get(`${API_BASE_URL}/livestock?${params}`);
       setLivestock(response.data.livestock || []);
+      setTotalCount(response.data.total || response.data.livestock?.length || 0);
     } catch (error) {
       console.error('Error fetching livestock:', error);
+      setError('Failed to load livestock listings. Please try again.');
+      if (error.response?.status === 500) {
+        setError('Server error. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleFilterChange = (e) => {
-    setFilters({
-      ...filters,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const clearFilters = () => {
@@ -83,7 +96,15 @@ const LivestockList = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchLivestock();
+    // Search is already triggered by useEffect when searchQuery changes
+  };
+
+  const handleSearchInputChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
   };
 
   const getTypeIcon = (type) => {
@@ -140,11 +161,11 @@ const LivestockList = () => {
               type="text" 
               placeholder="Search by breed, type, or location..." 
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchInputChange}
               className="ll_search_input"
             />
             {searchQuery && (
-              <button type="button" className="ll_search_clear" onClick={() => setSearchQuery('')}>
+              <button type="button" className="ll_search_clear" onClick={clearSearch}>
                 <FaTimes />
               </button>
             )}
@@ -250,7 +271,7 @@ const LivestockList = () => {
                   <button
                     key={type || 'all'}
                     className={`ll_type_option ${filters.type === type ? 'active' : ''}`}
-                    onClick={() => setFilters({ ...filters, type })}
+                    onClick={() => setFilters(prev => ({ ...prev, type }))}
                   >
                     {type ? getTypeIcon(type) : <GiCow />}
                     <span>{type ? type.charAt(0).toUpperCase() + type.slice(1) : 'All'}</span>
@@ -270,6 +291,7 @@ const LivestockList = () => {
                   placeholder="Min" 
                   onChange={handleFilterChange} 
                   className="ll_price_input"
+                  min="0"
                 />
                 <span>to</span>
                 <input 
@@ -279,6 +301,7 @@ const LivestockList = () => {
                   placeholder="Max" 
                   onChange={handleFilterChange} 
                   className="ll_price_input"
+                  min="0"
                 />
               </div>
             </div>
@@ -316,8 +339,8 @@ const LivestockList = () => {
       {/* Results Count */}
       <div className="ll_results_header">
         <div className="ll_results_count">
-          <span className="ll_count_number">{livestock.length}</span>
-          <span className="ll_count_text">{livestock.length === 1 ? 'Listing' : 'Listings'} Found</span>
+          <span className="ll_count_number">{totalCount}</span>
+          <span className="ll_count_text">{totalCount === 1 ? 'Listing' : 'Listings'} Found</span>
         </div>
         {hasActiveFilters && (
           <button onClick={clearFilters} className="ll_clear_all_btn">
@@ -332,32 +355,43 @@ const LivestockList = () => {
           {filters.type && (
             <span className="ll_active_filter">
               {getTypeIcon(filters.type)} {filters.type}
-              <button onClick={() => setFilters({ ...filters, type: '' })}>×</button>
+              <button onClick={() => setFilters(prev => ({ ...prev, type: '' }))}>×</button>
             </span>
           )}
           {(filters.minPrice || filters.maxPrice) && (
             <span className="ll_active_filter">
               R{filters.minPrice || '0'} - R{filters.maxPrice || '∞'}
-              <button onClick={() => setFilters({ ...filters, minPrice: '', maxPrice: '' })}>×</button>
+              <button onClick={() => setFilters(prev => ({ ...prev, minPrice: '', maxPrice: '' }))}>×</button>
             </span>
           )}
           {filters.location && (
             <span className="ll_active_filter">
               <FaMapMarkerAlt /> {filters.location}
-              <button onClick={() => setFilters({ ...filters, location: '' })}>×</button>
+              <button onClick={() => setFilters(prev => ({ ...prev, location: '' }))}>×</button>
             </span>
           )}
           {searchQuery && (
             <span className="ll_active_filter">
               Search: "{searchQuery}"
-              <button onClick={() => setSearchQuery('')}>×</button>
+              <button onClick={clearSearch}>×</button>
             </span>
           )}
         </div>
       )}
 
+      {/* Error Message */}
+      {error && (
+        <div className="ll_error_container">
+          <div className="ll_error_icon">⚠️</div>
+          <p className="ll_error_message">{error}</p>
+          <button onClick={fetchLivestock} className="ll_retry_btn">
+            Try Again
+          </button>
+        </div>
+      )}
+
       {/* Livestock Grid/List - Using the same LivestockCard component */}
-      {loading ? (
+      {!error && loading ? (
         <div className="ll_loading_grid">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="ll_loading_card">
@@ -370,13 +404,13 @@ const LivestockList = () => {
             </div>
           ))}
         </div>
-      ) : livestock.length > 0 ? (
+      ) : !error && livestock.length > 0 ? (
         <div className={`ll_results ${viewMode === 'grid' ? 'll_grid_view' : 'll_list_view'}`}>
           {livestock.map((item) => (
             <LivestockCard key={item._id} livestock={item} />
           ))}
         </div>
-      ) : (
+      ) : !error && livestock.length === 0 && !loading ? (
         <div className="ll_empty_state">
           <div className="ll_empty_icon">🐮</div>
           <h3 className="ll_empty_title">No Livestock Found</h3>
@@ -385,7 +419,7 @@ const LivestockList = () => {
             Clear All Filters
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

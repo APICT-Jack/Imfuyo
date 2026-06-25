@@ -750,3 +750,90 @@
   background: #cbd5e1;
   border-radius: 4px;
 }
+/* Error States */
+.ll_error_container {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: #fff3f3;
+  border-radius: 8px;
+  margin: 2rem 0;
+}
+
+.ll_error_icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.ll_error_message {
+  color: #d32f2f;
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ll_retry_btn {
+  background: #d32f2f;
+  color: white;
+  border: none;
+  padding: 0.5rem 2rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s;
+}
+
+.ll_retry_btn:hover {
+  background: #b71c1c;
+}
+
+/* Loading States */
+.ll_loading_grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.ll_loading_card {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.ll_loading_image {
+  height: 200px;
+  background: #e0e0e0;
+}
+
+.ll_loading_content {
+  padding: 1rem;
+}
+
+.ll_loading_title {
+  height: 20px;
+  background: #e0e0e0;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+  width: 70%;
+}
+
+.ll_loading_price {
+  height: 18px;
+  background: #e0e0e0;
+  margin-bottom: 0.5rem;
+  border-radius: 4px;
+  width: 40%;
+}
+
+.ll_loading_location {
+  height: 14px;
+  background: #e0e0e0;
+  border-radius: 4px;
+  width: 50%;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}

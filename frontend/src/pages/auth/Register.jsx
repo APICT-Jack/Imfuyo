@@ -1,7 +1,9 @@
+// src/pages/Register/Register.js
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { FaUser, FaEnvelope, FaLock, FaPhone, FaStore, FaAddressCard, FaSpinner } from 'react-icons/fa';
+import config from '../../config';
 import './Register.css';
 
 const Register = () => {
@@ -38,17 +40,23 @@ const Register = () => {
       return;
     }
     
-    const result = await register(formData);
-    setLoading(false);
-    
-    if (result.success) {
-      if (formData.role === 'seller') {
-        navigate('/seller/verify');
+    try {
+      const result = await register(formData);
+      
+      if (result.success) {
+        if (formData.role === 'seller') {
+          navigate('/seller/verify');
+        } else {
+          navigate('/');
+        }
       } else {
-        navigate('/');
+        setError(result.error || 'Registration failed. Please try again.');
       }
-    } else {
-      setError(result.error || 'Registration failed. Please try again.');
+    } catch (err) {
+      console.error('Registration error:', err);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -67,7 +75,14 @@ const Register = () => {
             <label>Full Name *</label>
             <div className="input-icon">
               <FaUser className="icon" />
-              <input type="text" name="name" value={formData.name} onChange={handleChange} placeholder="Enter your full name" required />
+              <input 
+                type="text" 
+                name="name" 
+                value={formData.name} 
+                onChange={handleChange} 
+                placeholder="Enter your full name" 
+                required 
+              />
             </div>
           </div>
           
@@ -75,7 +90,14 @@ const Register = () => {
             <label>Email Address *</label>
             <div className="input-icon">
               <FaEnvelope className="icon" />
-              <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Enter your email" required />
+              <input 
+                type="email" 
+                name="email" 
+                value={formData.email} 
+                onChange={handleChange} 
+                placeholder="Enter your email" 
+                required 
+              />
             </div>
           </div>
           
@@ -83,7 +105,14 @@ const Register = () => {
             <label>Password *</label>
             <div className="input-icon">
               <FaLock className="icon" />
-              <input type="password" name="password" value={formData.password} onChange={handleChange} placeholder="Minimum 6 characters" required />
+              <input 
+                type="password" 
+                name="password" 
+                value={formData.password} 
+                onChange={handleChange} 
+                placeholder="Minimum 6 characters" 
+                required 
+              />
             </div>
           </div>
           
@@ -91,13 +120,25 @@ const Register = () => {
             <label>Phone Number *</label>
             <div className="input-icon">
               <FaPhone className="icon" />
-              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} placeholder="Enter your phone number" required />
+              <input 
+                type="tel" 
+                name="phone" 
+                value={formData.phone} 
+                onChange={handleChange} 
+                placeholder="Enter your phone number" 
+                required 
+              />
             </div>
           </div>
           
           <div className="form-group">
             <label>I want to register as: *</label>
-            <select name="role" value={formData.role} onChange={handleChange} className="role-select">
+            <select 
+              name="role" 
+              value={formData.role} 
+              onChange={handleChange} 
+              className="role-select"
+            >
               <option value="buyer">Buyer - I want to purchase livestock</option>
               <option value="seller">Seller - I want to sell livestock or rent vehicles</option>
             </select>
@@ -109,7 +150,13 @@ const Register = () => {
                 <label>Business Name</label>
                 <div className="input-icon">
                   <FaStore className="icon" />
-                  <input type="text" name="businessName" value={formData.businessName} onChange={handleChange} placeholder="Your farm or business name" />
+                  <input 
+                    type="text" 
+                    name="businessName" 
+                    value={formData.businessName} 
+                    onChange={handleChange} 
+                    placeholder="Your farm or business name" 
+                  />
                 </div>
               </div>
               
@@ -117,7 +164,13 @@ const Register = () => {
                 <label>Business Address</label>
                 <div className="input-icon">
                   <FaAddressCard className="icon" />
-                  <textarea name="businessAddress" value={formData.businessAddress} onChange={handleChange} placeholder="Your business address" rows="3"></textarea>
+                  <textarea 
+                    name="businessAddress" 
+                    value={formData.businessAddress} 
+                    onChange={handleChange} 
+                    placeholder="Your business address" 
+                    rows="3"
+                  ></textarea>
                 </div>
               </div>
               

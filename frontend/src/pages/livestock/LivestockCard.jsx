@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { 
   FaExclamationTriangle, 
   FaCheckCircle, 
@@ -14,14 +15,21 @@ import {
   FaShare,
   FaEye,
   FaShieldAlt,
-  FaUserCircle
+  FaUserCircle,
+  FaSpinner
 } from 'react-icons/fa';
 import { GiCow, GiChicken, GiGoat, GiPig, GiSheep } from 'react-icons/gi';
 import './LivestockCard.css';
 
+// API Base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const LivestockCard = ({ livestock }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
   
   const isSellerVerified = livestock.seller?.isVerified;
   const showWarning = !isSellerVerified;
@@ -81,6 +89,110 @@ const LivestockCard = ({ livestock }) => {
   const currentPrice = getCurrentPrice();
   const hasVideos = livestock.videos && livestock.videos.length > 0;
 
+  // Handle like/unlike with API call
+  const handleLike = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isLiking) return;
+    
+    setIsLiking(true);
+    try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        // Redirect to login if not authenticated
+        window.location.href = '/login';
+        return;
+      }
+
+      const endpoint = isLiked ? 'unlike' : 'like';
+      const response = await axios.post(
+        `${API_BASE_URL}/livestock/${livestock._id}/${endpoint}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        setIsLiked(!isLiked);
+        // Optionally update the like count if available
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+      // Show user-friendly error
+      if (error.response?.status === 401) {
+        window.location.href = '/login';
+      }
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  // Handle image error
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoading(false);
+  };
+
+  // Handle image load
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
+
+  // Handle quick view
+  const handleQuickView = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Navigate to quick view or open modal
+    window.location.href = `/livestock/${livestock._id}`;
+  };
+
+  // Handle contact seller
+  const handleContact = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Open chat or contact form
+    console.log('Contact seller:', livestock.seller?._id);
+    // Could navigate to: `/messages/${livestock.seller?._id}`
+  };
+
+  // Handle share
+  const handleShare = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const shareUrl = `${window.location.origin}/livestock/${livestock._id}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: livestock.breed || livestock.type || 'Livestock for sale',
+          text: `Check out this ${livestock.breed || livestock.type} on Imfuyo!`,
+          url: shareUrl,
+        });
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('Share error:', error);
+        }
+      }
+    } else {
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        alert('Link copied to clipboard!');
+      } catch (err) {
+        console.error('Copy error:', err);
+        // Fallback: log the URL
+        console.log('Share URL:', shareUrl);
+      }
+    }
+  };
+
   // Handle tap for mobile expansion
   const handleCardClick = (e) => {
     if (window.innerWidth <= 768) {
@@ -89,29 +201,15 @@ const LivestockCard = ({ livestock }) => {
     }
   };
 
-  const handleLike = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsLiked(!isLiked);
+  // Get image URL with fallback
+  const getImageUrl = () => {
+    if (imageError || !livestock.images || !livestock.images[0]) {
+      return null;
+    }
+    return livestock.images[0];
   };
 
-  const handleQuickView = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Quick view:', livestock._id);
-  };
-
-  const handleContact = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Contact seller:', livestock.seller?._id);
-  };
-
-  const handleShare = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    console.log('Share listing:', livestock._id);
-  };
+  const imageUrl = getImageUrl();
 
   return (
     <div 
@@ -121,15 +219,26 @@ const LivestockCard = ({ livestock }) => {
       <Link to={`/livestock/${livestock._id}`} className="card-link-compact">
         {/* IMAGE SECTION - DOMINANT */}
         <div className="card-image-compact">
-          {livestock.images && livestock.images[0] ? (
-            <img 
-              src={livestock.images[0]} 
-              alt={livestock.breed || livestock.type}
-              loading="lazy"
-            />
+          {imageUrl ? (
+            <>
+              {imageLoading && (
+                <div className="image-loader">
+                  <FaSpinner className="spinner" />
+                </div>
+              )}
+              <img 
+                src={imageUrl} 
+                alt={livestock.breed || livestock.type || 'Livestock'}
+                loading="lazy"
+                onError={handleImageError}
+                onLoad={handleImageLoad}
+                style={{ display: imageLoading ? 'none' : 'block' }}
+              />
+            </>
           ) : (
             <div className="no-image-compact">
               {getTypeIcon(livestock.type)}
+              <span className="no-image-text">No Image</span>
             </div>
           )}
           
@@ -225,8 +334,13 @@ const LivestockCard = ({ livestock }) => {
                 <button className="hover-action-btn" onClick={handleContact}>
                   <FaComment /> Contact
                 </button>
-                <button className={`hover-action-btn like-btn ${isLiked ? 'liked' : ''}`} onClick={handleLike}>
-                  {isLiked ? <FaHeart /> : <FaRegHeart />} Save
+                <button 
+                  className={`hover-action-btn like-btn ${isLiked ? 'liked' : ''}`} 
+                  onClick={handleLike}
+                  disabled={isLiking}
+                >
+                  {isLiking ? <FaSpinner className="spinner" /> : (isLiked ? <FaHeart /> : <FaRegHeart />)} 
+                  Save
                 </button>
                 <button className="hover-action-btn" onClick={handleShare}>
                   <FaShare /> Share
@@ -319,8 +433,13 @@ const LivestockCard = ({ livestock }) => {
             <button className="mobile-action-btn" onClick={handleContact}>
               <FaComment /> Contact
             </button>
-            <button className={`mobile-action-btn ${isLiked ? 'liked' : ''}`} onClick={handleLike}>
-              {isLiked ? <FaHeart /> : <FaRegHeart />} Save
+            <button 
+              className={`mobile-action-btn ${isLiked ? 'liked' : ''}`} 
+              onClick={handleLike}
+              disabled={isLiking}
+            >
+              {isLiking ? <FaSpinner className="spinner" /> : (isLiked ? <FaHeart /> : <FaRegHeart />)} 
+              Save
             </button>
           </div>
         </div>
