@@ -1,4 +1,4 @@
-// LivestockCard.jsx - Using same pattern as detail page
+// LivestockCard.jsx - Using the same pattern as VehicleCard
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -29,8 +29,6 @@ const LivestockCard = ({ livestock }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
-  const [imageError, setImageError] = useState(false);
-  const [imageLoading, setImageLoading] = useState(true);
   
   const isSellerVerified = livestock.seller?.isVerified;
   const showWarning = !isSellerVerified;
@@ -130,17 +128,6 @@ const LivestockCard = ({ livestock }) => {
     }
   };
 
-  // Handle image error - same pattern as detail page
-  const handleImageError = () => {
-    setImageError(true);
-    setImageLoading(false);
-  };
-
-  // Handle image load - same pattern as detail page
-  const handleImageLoad = () => {
-    setImageLoading(false);
-  };
-
   // Handle quick view
   const handleQuickView = (e) => {
     e.preventDefault();
@@ -192,42 +179,27 @@ const LivestockCard = ({ livestock }) => {
     }
   };
 
-  // Get display images - same pattern as detail page
-  const displayImages = livestock.images?.filter((_, idx) => !imageError) || [];
-  const hasMultipleImages = displayImages.length > 1;
-
   return (
     <div 
       className={`livestock-card-compact ${isExpanded ? 'expanded' : ''} ${showWarning ? 'unverified-seller-card' : ''}`}
       onClick={handleCardClick}
     >
       <Link to={`/livestock/${livestock._id}`} className="card-link-compact">
-        {/* IMAGE SECTION - DOMINANT */}
+        {/* IMAGE SECTION - EXACTLY LIKE VEHICLECARD */}
         <div className="card-image-compact">
-          {displayImages.length > 0 ? (
-            <>
-              {imageLoading && (
-                <div className="image-loader">
-                  <FaSpinner className="spinner" />
-                </div>
-              )}
-              <img 
-                src={displayImages[0]} 
-                alt={livestock.breed || livestock.type || 'Livestock'}
-                loading="lazy"
-                onError={handleImageError}
-                onLoad={handleImageLoad}
-                style={{ display: imageLoading ? 'none' : 'block' }}
-              />
-            </>
+          {livestock.images && livestock.images[0] ? (
+            <img 
+              src={livestock.images[0]} 
+              alt={livestock.breed || livestock.type || 'Livestock'}
+              loading="lazy"
+            />
           ) : (
             <div className="no-image-compact">
               {getTypeIcon(livestock.type)}
-              <span className="no-image-text">No Image</span>
             </div>
           )}
           
-          {/* Image Badges (overlay on image) - FULL LABELS */}
+          {/* Image Badges - FULL LABELS */}
           <div className="image-badges">
             {showWarning && (
               <span className="badge-warning" title="Unverified Seller - Exercise caution">
