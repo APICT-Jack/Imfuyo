@@ -27,10 +27,42 @@ const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
+// ==================== CORS CONFIGURATION (MUST BE FIRST) ====================
+console.log('=== CORS Configuration ===');
+console.log('CORS Origins:', process.env.CORS_ORIGINS || 'http://localhost:3000');
+
+// Apply CORS middleware
+app.use(cors(config.cors));
+
+// Handle preflight requests explicitly
+app.options('*', cors(config.cors));
+
+// Add manual CORS headers as a backup
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:3000').split(',');
+  
+  if (origin && allowedOrigins.includes(origin)) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else if (origin && process.env.NODE_ENV === 'development') {
+    res.header('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 // ==================== SECURITY MIDDLEWARE ====================
 
-// Helmet - Security headers
+// Helmet - Security headers (with CORS-friendly settings)
 app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
@@ -39,17 +71,14 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https:", "http:", "https://res.cloudinary.com"],
     },
   },
-  crossOriginEmbedderPolicy: false, // Allow Cloudinary
+  crossOriginEmbedderPolicy: false,
 }));
-
-// CORS - Configured per environment
-app.use(cors(config.cors));
 
 // Compression - Gzip responses
 if (config.performance.compression) {
   app.use(compression({
     level: 6,
-    threshold: 1024, // Compress responses > 1KB
+    threshold: 1024,
     filter: (req, res) => {
       if (req.headers['x-no-compression']) {
         return false;
@@ -72,7 +101,7 @@ app.use(xss());
 
 // Prevent parameter pollution
 app.use(hpp({
-  whitelist: ['page', 'limit', 'sort', 'minPrice', 'maxPrice', 'age'] // Allowed duplicate params
+  whitelist: ['page', 'limit', 'sort', 'minPrice', 'maxPrice', 'age']
 }));
 
 // ==================== LOGGING MIDDLEWARE ====================
@@ -111,34 +140,32 @@ const globalLimiter = rateLimit({
     message: 'Too many requests from this IP, please try again later.',
     code: 'RATE_LIMIT_EXCEEDED'
   },
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  standardHeaders: true,
+  legacyHeaders: false,
   keyGenerator: (req) => {
-    // Use user ID if authenticated, otherwise IP
     return req.user?.id || req.ip;
   },
   skip: (req) => {
-    // Skip rate limiting for admin endpoints? Optional
     return req.path.startsWith('/api/admin') && req.user?.role === 'admin';
   }
 });
 
 // Strict limiter for auth endpoints
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 attempts
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   message: {
     success: false,
     message: 'Too many authentication attempts, please try again after 15 minutes.',
     code: 'AUTH_RATE_LIMIT_EXCEEDED'
   },
-  skipSuccessfulRequests: true, // Don't count successful requests
+  skipSuccessfulRequests: true,
 });
 
 // Strict limiter for bid/purchase endpoints
 const transactionLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10, // 10 requests per minute
+  windowMs: 60 * 1000,
+  max: 10,
   message: {
     success: false,
     message: 'Too many transaction attempts, please slow down.',
@@ -146,10 +173,10 @@ const transactionLimiter = rateLimit({
   }
 });
 
-// Upload limiter (larger window due to file sizes)
+// Upload limiter
 const uploadLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 50, // 50 uploads per hour
+  windowMs: 60 * 60 * 1000,
+  max: 50,
   message: {
     success: false,
     message: 'Upload limit reached, please try again later.',
@@ -166,7 +193,6 @@ app.use('/api/upload', uploadLimiter);
 
 // ==================== STATIC FILES ====================
 
-// Serve static files with cache control
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
   maxAge: config.performance.cacheMaxAge,
   etag: true,
@@ -175,7 +201,6 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
 
 // ==================== HEALTH CHECK ENDPOINTS ====================
 
-// Simple health check for load balancers
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'healthy',
@@ -186,7 +211,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Detailed health check
 app.get('/health/detailed', async (req, res) => {
   const health = {
     status: 'healthy',
@@ -205,7 +229,6 @@ app.get('/health/detailed', async (req, res) => {
     platform: process.platform
   };
   
-  // Check MongoDB connection
   if (mongoose.connection.readyState !== 1) {
     health.status = 'unhealthy';
     health.mongodb.error = 'MongoDB not connected';
@@ -217,7 +240,6 @@ app.get('/health/detailed', async (req, res) => {
 
 // ==================== ROUTES ====================
 
-// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/livestock', livestockRoutes);
 app.use('/api/vehicles', vehicleRoutes);
@@ -237,7 +259,6 @@ app.get('/', (req, res) => {
   });
 });
 
-// API documentation placeholder
 app.get('/api/docs', (req, res) => {
   res.json({
     message: 'API documentation available at /api-docs',
@@ -253,10 +274,7 @@ app.get('/api/docs', (req, res) => {
 
 // ==================== ERROR HANDLING ====================
 
-// 404 handler - Must be after all routes
 app.use(notFoundHandler);
-
-// Global error handler - Must be last
 app.use(errorHandler);
 
 module.exports = { app, config };

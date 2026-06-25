@@ -4,10 +4,16 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config();
 
+// Parse CORS origins from environment variable
+const parseCorsOrigins = () => {
+  const origins = process.env.CORS_ORIGINS || 'http://localhost:3000';
+  return origins.split(',').map(origin => origin.trim());
+};
+
 const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 5000,
-  host: process.env.HOST || '0.0.0.0', // Important: Use 0.0.0.0 for Render
+  host: process.env.HOST || '0.0.0.0',
   
   mongodb: {
     uri: process.env.MONGODB_URI,
@@ -30,10 +36,36 @@ const config = {
   },
   
   cors: {
-    origin: process.env.CORS_ORIGINS ? process.env.CORS_ORIGINS.split(',') : ['http://localhost:3000'],
+    origin: function(origin, callback) {
+      const allowedOrigins = parseCorsOrigins();
+      
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      // Allow if origin matches any allowed origin
+      if (allowedOrigins.indexOf(origin) !== -1) {
+        callback(null, true);
+      } else {
+        console.log('CORS blocked origin:', origin);
+        console.log('Allowed origins:', allowedOrigins);
+        callback(new Error(`Origin ${origin} not allowed by CORS`));
+      }
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS', 'HEAD'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+      'Access-Control-Allow-Origin',
+      'Access-Control-Allow-Headers',
+      'Access-Control-Allow-Methods'
+    ],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    preflightContinue: false,
+    optionsSuccessStatus: 204
   },
   
   cloudinary: {

@@ -31,6 +31,7 @@ const startServer = async () => {
       console.log(`🚀 Server running on 0.0.0.0:${config.port}`);
       console.log(`🌍 Environment: ${config.env}`);
       console.log(`📡 PID: ${process.pid}`);
+      console.log(`✅ CORS enabled for origins: ${process.env.CORS_ORIGINS || 'http://localhost:3000'}`);
       
       if (config.env === 'development') {
         console.log(`📚 API available at http://localhost:${config.port}`);
@@ -73,14 +74,12 @@ const setupGracefulShutdown = () => {
   const shutdown = async (signal) => {
     console.log(`\n⚠️ Received ${signal}, starting graceful shutdown...`);
     
-    // Set timeout for forced shutdown
     const timeout = setTimeout(() => {
       console.error('Could not close connections in time, forcefully shutting down');
       process.exit(1);
-    }, 30000); // 30 seconds timeout
+    }, 30000);
     
     try {
-      // Close server - stop accepting new connections
       if (server) {
         await new Promise((resolve, reject) => {
           server.close((err) => {
@@ -91,7 +90,6 @@ const setupGracefulShutdown = () => {
         console.log('✅ HTTP server closed');
       }
       
-      // Close database connection
       if (mongoose.connection.readyState === 1) {
         await mongoose.connection.close();
         console.log('✅ MongoDB connection closed');
@@ -107,18 +105,15 @@ const setupGracefulShutdown = () => {
     }
   };
   
-  // Handle various shutdown signals
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
   process.on('SIGHUP', () => shutdown('SIGHUP'));
   
-  // Handle uncaught exceptions
   process.on('uncaughtException', (error) => {
     console.error('Uncaught Exception:', error);
     shutdown('UNCAUGHT_EXCEPTION');
   });
   
-  // Handle unhandled promise rejections
   process.on('unhandledRejection', (reason, promise) => {
     console.error('Unhandled Rejection at:', promise, 'reason:', reason);
     shutdown('UNHANDLED_REJECTION');
@@ -127,11 +122,8 @@ const setupGracefulShutdown = () => {
 
 /**
  * Cluster mode for production
- * Uses all CPU cores for better performance
  */
 const startWithCluster = () => {
-  // Don't use cluster in development or if explicitly disabled
-  // DISABLE_CLUSTER=true is recommended for Render's free tier
   if (config.env !== 'production' || process.env.DISABLE_CLUSTER === 'true') {
     console.log('📌 Running in single-threaded mode (cluster disabled)');
     return startServer();
@@ -144,25 +136,21 @@ const startWithCluster = () => {
     console.log(`🔧 Master ${process.pid} is running`);
     console.log(`💻 Forking ${workersToFork} workers on ${numCPUs} CPUs`);
     
-    // Fork workers
     for (let i = 0; i < workersToFork; i++) {
       cluster.fork();
     }
     
-    // Handle worker crashes
     cluster.on('exit', (worker, code, signal) => {
       console.log(`⚠️ Worker ${worker.process.pid} died with code ${code}, signal ${signal}`);
       console.log('🔄 Starting a new worker...');
       cluster.fork();
     });
     
-    // Handle cluster errors
     cluster.on('error', (error) => {
       console.error('Cluster error:', error);
     });
     
   } else {
-    // Workers share the TCP connection
     startServer();
   }
 };
