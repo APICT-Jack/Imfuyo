@@ -1,5 +1,5 @@
-// LivestockCard.jsx - Updated with better image handling
-import React, { useState, useEffect } from 'react';
+// LivestockCard.jsx - Using same pattern as detail page
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
@@ -25,44 +25,12 @@ import './LivestockCard.css';
 // API Base URL from environment variable
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
-// Helper to get full image URL
-const getFullImageUrl = (imagePath) => {
-  if (!imagePath) return null;
-  
-  // If it's already a full URL (starts with http or https)
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
-    return imagePath;
-  }
-  
-  // If it's a relative path starting with /uploads
-  if (imagePath.startsWith('/uploads')) {
-    // Use the backend URL for uploads
-    const backendUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    return `${backendUrl}${imagePath}`;
-  }
-  
-  // If it's a relative path without /uploads
-  if (imagePath.startsWith('/')) {
-    const backendUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    return `${backendUrl}${imagePath}`;
-  }
-  
-  // If it's a Cloudinary URL or other full URL
-  if (imagePath.includes('cloudinary') || imagePath.includes('res.cloudinary')) {
-    return imagePath;
-  }
-  
-  // Default: try to use as is
-  return imagePath;
-};
-
 const LivestockCard = ({ livestock }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
-  const [imageLoadTimeout, setImageLoadTimeout] = useState(false);
   
   const isSellerVerified = livestock.seller?.isVerified;
   const showWarning = !isSellerVerified;
@@ -122,22 +90,6 @@ const LivestockCard = ({ livestock }) => {
   const currentPrice = getCurrentPrice();
   const hasVideos = livestock.videos && livestock.videos.length > 0;
 
-  // Get full image URL
-  const imageUrl = getFullImageUrl(livestock.images?.[0]);
-
-  // Set a timeout to show error if image takes too long to load
-  useEffect(() => {
-    if (imageUrl && imageLoading) {
-      const timeoutId = setTimeout(() => {
-        setImageLoadTimeout(true);
-        setImageLoading(false);
-        setImageError(true);
-      }, 10000); // 10 second timeout
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [imageUrl, imageLoading]);
-
   // Handle like/unlike with API call
   const handleLike = async (e) => {
     e.preventDefault();
@@ -178,16 +130,15 @@ const LivestockCard = ({ livestock }) => {
     }
   };
 
-  // Handle image error
+  // Handle image error - same pattern as detail page
   const handleImageError = () => {
     setImageError(true);
     setImageLoading(false);
   };
 
-  // Handle image load
+  // Handle image load - same pattern as detail page
   const handleImageLoad = () => {
     setImageLoading(false);
-    setImageLoadTimeout(false);
   };
 
   // Handle quick view
@@ -241,6 +192,10 @@ const LivestockCard = ({ livestock }) => {
     }
   };
 
+  // Get display images - same pattern as detail page
+  const displayImages = livestock.images?.filter((_, idx) => !imageError) || [];
+  const hasMultipleImages = displayImages.length > 1;
+
   return (
     <div 
       className={`livestock-card-compact ${isExpanded ? 'expanded' : ''} ${showWarning ? 'unverified-seller-card' : ''}`}
@@ -249,22 +204,20 @@ const LivestockCard = ({ livestock }) => {
       <Link to={`/livestock/${livestock._id}`} className="card-link-compact">
         {/* IMAGE SECTION - DOMINANT */}
         <div className="card-image-compact">
-          {imageUrl && !imageError ? (
+          {displayImages.length > 0 ? (
             <>
-              {imageLoading && !imageLoadTimeout && (
+              {imageLoading && (
                 <div className="image-loader">
                   <FaSpinner className="spinner" />
-                  <span className="loading-text">Loading...</span>
                 </div>
               )}
               <img 
-                src={imageUrl} 
+                src={displayImages[0]} 
                 alt={livestock.breed || livestock.type || 'Livestock'}
                 loading="lazy"
                 onError={handleImageError}
                 onLoad={handleImageLoad}
-                style={{ display: (imageLoading && !imageLoadTimeout) ? 'none' : 'block' }}
-                crossOrigin="anonymous"
+                style={{ display: imageLoading ? 'none' : 'block' }}
               />
             </>
           ) : (
