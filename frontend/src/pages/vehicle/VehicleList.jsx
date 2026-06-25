@@ -1,4 +1,4 @@
-// VehicleList.jsx - Complete Mobile-First Redesign
+// VehicleList.jsx - Complete Mobile-First Redesign with Render Compatibility
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -14,14 +14,19 @@ import {
   FaSortAmountUp,
   FaThLarge,
   FaList,
-  FaMapMarkerAlt
+  FaMapMarkerAlt,
+  FaSpinner
 } from 'react-icons/fa';
 import VehicleCard from './VehicleCard';
 import './VehicleList.css';
 
+// API Base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const VehicleList = () => {
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [showSort, setShowSort] = useState(false);
   const [viewMode, setViewMode] = useState('grid');
@@ -34,16 +39,18 @@ const VehicleList = () => {
   });
   const [sortBy, setSortBy] = useState('newest');
   const [searchQuery, setSearchQuery] = useState('');
+  const [totalCount, setTotalCount] = useState(0);
   
   const filterPanelRef = useRef(null);
   const sortPanelRef = useRef(null);
 
   useEffect(() => {
     fetchVehicles();
-  }, [filters, sortBy]);
+  }, [filters, sortBy, searchQuery]);
 
   const fetchVehicles = async () => {
     setLoading(true);
+    setError(null);
     try {
       const params = new URLSearchParams();
       if (filters.type) params.append('type', filters.type);
@@ -55,20 +62,26 @@ const VehicleList = () => {
       params.append('sort', sortBy);
       params.append('limit', '20');
       
-      const response = await axios.get(`http://localhost:5000/api/vehicles?${params}`);
+      const response = await axios.get(`${API_BASE_URL}/vehicles?${params}`);
       setVehicles(response.data.vehicles || []);
+      setTotalCount(response.data.total || response.data.vehicles?.length || 0);
     } catch (error) {
       console.error('Error fetching vehicles:', error);
+      setError('Failed to load vehicles. Please try again.');
+      if (error.response?.status === 500) {
+        setError('Server error. Please try again later.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleFilterChange = (e) => {
-    setFilters({
-      ...filters,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const clearFilters = () => {
@@ -85,7 +98,15 @@ const VehicleList = () => {
 
   const handleSearch = (e) => {
     e.preventDefault();
-    fetchVehicles();
+    // Search is already triggered by useEffect when searchQuery changes
+  };
+
+  const handleSearchInputChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const clearSearch = () => {
+    setSearchQuery('');
   };
 
   const getSortLabel = () => {
@@ -141,11 +162,11 @@ const VehicleList = () => {
               type="text" 
               placeholder="Search by model, type, or location..." 
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={handleSearchInputChange}
               className="vl_search_input"
             />
             {searchQuery && (
-              <button type="button" className="vl_search_clear" onClick={() => setSearchQuery('')}>
+              <button type="button" className="vl_search_clear" onClick={clearSearch}>
                 <FaTimes />
               </button>
             )}
@@ -251,7 +272,7 @@ const VehicleList = () => {
                   <button
                     key={type.value || 'all'}
                     className={`vl_type_option ${filters.type === type.value ? 'active' : ''}`}
-                    onClick={() => setFilters({ ...filters, type: type.value })}
+                    onClick={() => setFilters(prev => ({ ...prev, type: type.value }))}
                   >
                     <span className="vl_type_icon">{type.icon}</span>
                     <span>{type.label}</span>
@@ -266,19 +287,19 @@ const VehicleList = () => {
               <div className="vl_availability_options">
                 <button
                   className={`vl_availability_option ${filters.available === '' ? 'active' : ''}`}
-                  onClick={() => setFilters({ ...filters, available: '' })}
+                  onClick={() => setFilters(prev => ({ ...prev, available: '' }))}
                 >
                   All
                 </button>
                 <button
                   className={`vl_availability_option ${filters.available === 'true' ? 'active' : ''}`}
-                  onClick={() => setFilters({ ...filters, available: 'true' })}
+                  onClick={() => setFilters(prev => ({ ...prev, available: 'true' }))}
                 >
                   ✅ Available Only
                 </button>
                 <button
                   className={`vl_availability_option ${filters.available === 'false' ? 'active' : ''}`}
-                  onClick={() => setFilters({ ...filters, available: 'false' })}
+                  onClick={() => setFilters(prev => ({ ...prev, available: 'false' }))}
                 >
                   ⏳ On Duty Only
                 </button>
@@ -296,6 +317,7 @@ const VehicleList = () => {
                   placeholder="Min" 
                   onChange={handleFilterChange} 
                   className="vl_price_input"
+                  min="0"
                 />
                 <span>to</span>
                 <input 
@@ -305,6 +327,7 @@ const VehicleList = () => {
                   placeholder="Max" 
                   onChange={handleFilterChange} 
                   className="vl_price_input"
+                  min="0"
                 />
               </div>
             </div>
@@ -342,8 +365,8 @@ const VehicleList = () => {
       {/* Results Count */}
       <div className="vl_results_header">
         <div className="vl_results_count">
-          <span className="vl_count_number">{vehicles.length}</span>
-          <span className="vl_count_text">{vehicles.length === 1 ? 'Vehicle' : 'Vehicles'} Found</span>
+          <span className="vl_count_number">{totalCount}</span>
+          <span className="vl_count_text">{totalCount === 1 ? 'Vehicle' : 'Vehicles'} Found</span>
         </div>
         {hasActiveFilters && (
           <button onClick={clearFilters} className="vl_clear_all_btn">
@@ -358,44 +381,55 @@ const VehicleList = () => {
           {filters.type && (
             <span className="vl_active_filter">
               {vehicleTypes.find(t => t.value === filters.type)?.icon} {vehicleTypes.find(t => t.value === filters.type)?.label}
-              <button onClick={() => setFilters({ ...filters, type: '' })}>×</button>
+              <button onClick={() => setFilters(prev => ({ ...prev, type: '' }))}>×</button>
             </span>
           )}
           {filters.available === 'true' && (
             <span className="vl_active_filter">
               ✅ Available Only
-              <button onClick={() => setFilters({ ...filters, available: '' })}>×</button>
+              <button onClick={() => setFilters(prev => ({ ...prev, available: '' }))}>×</button>
             </span>
           )}
           {filters.available === 'false' && (
             <span className="vl_active_filter">
               ⏳ On Duty Only
-              <button onClick={() => setFilters({ ...filters, available: '' })}>×</button>
+              <button onClick={() => setFilters(prev => ({ ...prev, available: '' }))}>×</button>
             </span>
           )}
           {(filters.minPrice || filters.maxPrice) && (
             <span className="vl_active_filter">
               R{filters.minPrice || '0'} - R{filters.maxPrice || '∞'}
-              <button onClick={() => setFilters({ ...filters, minPrice: '', maxPrice: '' })}>×</button>
+              <button onClick={() => setFilters(prev => ({ ...prev, minPrice: '', maxPrice: '' }))}>×</button>
             </span>
           )}
           {filters.location && (
             <span className="vl_active_filter">
               <FaMapMarkerAlt /> {filters.location}
-              <button onClick={() => setFilters({ ...filters, location: '' })}>×</button>
+              <button onClick={() => setFilters(prev => ({ ...prev, location: '' }))}>×</button>
             </span>
           )}
           {searchQuery && (
             <span className="vl_active_filter">
               Search: "{searchQuery}"
-              <button onClick={() => setSearchQuery('')}>×</button>
+              <button onClick={clearSearch}>×</button>
             </span>
           )}
         </div>
       )}
 
+      {/* Error Message */}
+      {error && (
+        <div className="vl_error_container">
+          <div className="vl_error_icon">⚠️</div>
+          <p className="vl_error_message">{error}</p>
+          <button onClick={fetchVehicles} className="vl_retry_btn">
+            Try Again
+          </button>
+        </div>
+      )}
+
       {/* Vehicles Grid/List - Using VehicleCard component */}
-      {loading ? (
+      {!error && loading ? (
         <div className="vl_loading_grid">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <div key={i} className="vl_loading_card">
@@ -408,13 +442,13 @@ const VehicleList = () => {
             </div>
           ))}
         </div>
-      ) : vehicles.length > 0 ? (
+      ) : !error && vehicles.length > 0 ? (
         <div className={`vl_results ${viewMode === 'grid' ? 'vl_grid_view' : 'vl_list_view'}`}>
           {vehicles.map((vehicle) => (
             <VehicleCard key={vehicle._id} vehicle={vehicle} />
           ))}
         </div>
-      ) : (
+      ) : !error && vehicles.length === 0 && !loading ? (
         <div className="vl_empty_state">
           <div className="vl_empty_icon">🚛</div>
           <h3 className="vl_empty_title">No Vehicles Found</h3>
@@ -423,7 +457,7 @@ const VehicleList = () => {
             Clear All Filters
           </button>
         </div>
-      )}
+      ) : null}
     </div>
   );
 };

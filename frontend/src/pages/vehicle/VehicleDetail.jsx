@@ -1,4 +1,4 @@
-// VehicleDetail.jsx - Complete Mobile-First Redesign
+// VehicleDetail.jsx - Complete Mobile-First Redesign with Render Compatibility
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -9,12 +9,15 @@ import {
   FaIdCard, FaCalendarAlt, FaTractor, FaInfoCircle, FaWhatsapp,
   FaEnvelope, FaGasPump, FaCog, FaSnowflake, FaWifi, FaTv,
   FaChevronLeft, FaChevronRight, FaExpand, FaTimes, FaCheck,
-  FaTag, FaStore, FaShieldAlt, FaStar, FaStarHalfAlt, FaRegStar
+  FaTag, FaStore, FaShieldAlt, FaStar, FaStarHalfAlt, FaRegStar,
+  FaSpinner
 } from 'react-icons/fa';
 import { GiChicken, GiCow, GiGoat, GiSheep } from 'react-icons/gi';
-import { formatZAR } from '../../utils/currency';
 import SidePanel from '.././SidePanel';
 import './VehicleDetail.css';
+
+// API Base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const VehicleDetail = () => {
   const { id } = useParams();
@@ -33,6 +36,7 @@ const VehicleDetail = () => {
   const [activeTab, setActiveTab] = useState('details');
   const [showContactOptions, setShowContactOptions] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [booking, setBooking] = useState({
     startDate: '',
     endDate: '',
@@ -41,6 +45,8 @@ const VehicleDetail = () => {
     customerPhone: ''
   });
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [imageLoading, setImageLoading] = useState({});
+  const [imageErrors, setImageErrors] = useState({});
   
   const galleryRef = useRef(null);
 
@@ -58,12 +64,16 @@ const VehicleDetail = () => {
   const fetchVehicle = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`http://localhost:5000/api/vehicles/${id}`);
+      const response = await axios.get(`${API_BASE_URL}/vehicles/${id}`);
       setVehicle(response.data);
       setError(null);
     } catch (error) {
       console.error('Error fetching vehicle:', error);
-      setError('Vehicle not found or failed to load');
+      if (error.response?.status === 404) {
+        setError('Vehicle not found');
+      } else {
+        setError('Failed to load vehicle details. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -73,7 +83,7 @@ const VehicleDetail = () => {
     setLivestockLoading(true);
     setSearchMessage(null);
     try {
-      const response = await axios.get(`http://localhost:5000/api/vehicles/nearby/livestock`, {
+      const response = await axios.get(`${API_BASE_URL}/vehicles/nearby/livestock`, {
         params: {
           location: vehicle.location,
           limit: 5
@@ -108,9 +118,14 @@ const VehicleDetail = () => {
     
     setBookingLoading(true);
     try {
-      await axios.post('http://localhost:5000/api/vehicles/book', {
+      const currentToken = localStorage.getItem('token');
+      const response = await axios.post(`${API_BASE_URL}/vehicles/book`, {
         vehicleId: id,
         ...booking
+      }, {
+        headers: {
+          'Authorization': `Bearer ${currentToken}`
+        }
       });
       alert('Booking request submitted successfully! The owner will contact you shortly.');
       setBooking({ 
@@ -123,6 +138,7 @@ const VehicleDetail = () => {
       setShowBookingModal(false);
       fetchVehicle();
     } catch (error) {
+      console.error('Booking error:', error);
       alert('Error booking vehicle: ' + (error.response?.data?.message || 'Please try again'));
     } finally {
       setBookingLoading(false);
@@ -149,7 +165,7 @@ const VehicleDetail = () => {
     if (!vehicle?.owner) return;
     
     if (method === 'whatsapp' && vehicle.owner.phone) {
-      const message = `Hi, I'm interested in your ${vehicle.model} listed on Imfuyo for ${formatZAR(vehicle.pricePerDay)}/day`;
+      const message = `Hi, I'm interested in your ${vehicle.model} listed on Imfuyo for R${vehicle.pricePerDay}/day`;
       const phone = vehicle.owner.phone.replace(/\D/g, '');
       window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
     } else if (method === 'call' && vehicle.owner.phone) {
@@ -169,7 +185,7 @@ const VehicleDetail = () => {
     
     const shareData = {
       title: vehicle.model,
-      text: `Check out this ${vehicle.model} for ${formatZAR(vehicle.pricePerDay)}/day`,
+      text: `Check out this ${vehicle.model} for R${vehicle.pricePerDay}/day`,
       url: window.location.href,
     };
     
@@ -177,20 +193,67 @@ const VehicleDetail = () => {
       try {
         await navigator.share(shareData);
       } catch (err) {
-        console.log('Error sharing:', err);
+        if (err.name !== 'AbortError') {
+          console.error('Share error:', err);
+        }
       }
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Link copied to clipboard!');
+      } catch (err) {
+        console.error('Copy error:', err);
+        // Fallback
+        const input = document.createElement('input');
+        input.value = window.location.href;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        alert('Link copied to clipboard!');
+      }
     }
   };
 
-  const handleSave = () => {
-    setIsSaved(!isSaved);
-    // TODO: Implement save to backend
+  const handleSave = async () => {
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const endpoint = isSaved ? 'unlike' : 'like';
+      const response = await axios.post(
+        `${API_BASE_URL}/vehicles/${vehicle._id}/${endpoint}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        setIsSaved(!isSaved);
+      }
+    } catch (error) {
+      console.error('Error saving vehicle:', error);
+      if (error.response?.status === 401) {
+        navigate('/login');
+      } else {
+        alert('Failed to save listing. Please try again.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const formatZARPrice = (price) => {
+    if (!price) return 'POA';
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
       currency: 'ZAR',
@@ -239,6 +302,15 @@ const VehicleDetail = () => {
     }
   };
 
+  const handleImageError = (index) => {
+    setImageErrors(prev => ({ ...prev, [index]: true }));
+    setImageLoading(prev => ({ ...prev, [index]: false }));
+  };
+
+  const handleImageLoad = (index) => {
+    setImageLoading(prev => ({ ...prev, [index]: false }));
+  };
+
   const renderStars = (rating) => {
     if (!rating) return null;
     
@@ -247,13 +319,13 @@ const VehicleDetail = () => {
     const hasHalfStar = rating % 1 >= 0.5;
     
     for (let i = 0; i < fullStars; i++) {
-      stars.push(<FaStar key={i} />);
+      stars.push(<FaStar key={i} color="#FFD700" />);
     }
     if (hasHalfStar) {
-      stars.push(<FaStarHalfAlt key="half" />);
+      stars.push(<FaStarHalfAlt key="half" color="#FFD700" />);
     }
     while (stars.length < 5) {
-      stars.push(<FaRegStar key={stars.length} />);
+      stars.push(<FaRegStar key={stars.length} color="#FFD700" />);
     }
     return stars;
   };
@@ -305,7 +377,8 @@ const VehicleDetail = () => {
 
   const statusInfo = getStatusInfo(vehicle.available);
   const images = vehicle.images || [];
-  const hasMultipleImages = images.length > 1;
+  const displayImages = images.filter((_, idx) => !imageErrors[idx]);
+  const hasMultipleImages = displayImages.length > 1;
   const isOwnerVerified = vehicle.ownerVerified || false;
   const ownerRating = vehicle.owner?.rating;
 
@@ -317,8 +390,13 @@ const VehicleDetail = () => {
           <FaArrowLeft />
         </button>
         <div className="vd_header_actions">
-          <button className="vd_header_action" onClick={handleSave} aria-label="Save listing">
-            {isSaved ? <FaHeartSolid className="vd_saved" /> : <FaRegHeart />}
+          <button 
+            className="vd_header_action" 
+            onClick={handleSave} 
+            aria-label="Save listing"
+            disabled={isSaving}
+          >
+            {isSaving ? <FaSpinner className="spinner" /> : (isSaved ? <FaHeartSolid className="vd_saved" /> : <FaRegHeart />)}
           </button>
           <button className="vd_header_action" onClick={handleShare} aria-label="Share listing">
             <FaShareAlt />
@@ -329,15 +407,29 @@ const VehicleDetail = () => {
       {/* Image Gallery */}
       <div className="vd_gallery" ref={galleryRef}>
         <div className="vd_gallery_main" onClick={() => setIsLightboxOpen(true)}>
-          {images.length > 0 ? (
-            <img src={images[selectedImage]} alt={vehicle.model} className="vd_gallery_image" />
+          {displayImages.length > 0 ? (
+            <>
+              {imageLoading[selectedImage] !== false && (
+                <div className="vd_image_loader">
+                  <FaSpinner className="spinner" />
+                </div>
+              )}
+              <img 
+                src={displayImages[selectedImage]} 
+                alt={vehicle.model} 
+                className="vd_gallery_image"
+                onError={() => handleImageError(selectedImage)}
+                onLoad={() => handleImageLoad(selectedImage)}
+                style={{ display: imageLoading[selectedImage] === false ? 'block' : 'none' }}
+              />
+            </>
           ) : (
             <div className="vd_gallery_placeholder">
               <FaTractor size={64} />
               <p>No Image Available</p>
             </div>
           )}
-          {hasMultipleImages && (
+          {hasMultipleImages && displayImages.length > 1 && (
             <>
               <button className="vd_gallery_nav vd_gallery_prev" onClick={(e) => { e.stopPropagation(); prevImage(); }}>
                 <FaChevronLeft />
@@ -346,7 +438,7 @@ const VehicleDetail = () => {
                 <FaChevronRight />
               </button>
               <div className="vd_gallery_counter">
-                {selectedImage + 1} / {images.length}
+                {selectedImage + 1} / {displayImages.length}
               </div>
               <button className="vd_gallery_expand">
                 <FaExpand />
@@ -355,9 +447,9 @@ const VehicleDetail = () => {
           )}
         </div>
         
-        {hasMultipleImages && (
+        {hasMultipleImages && displayImages.length > 1 && (
           <div className="vd_gallery_thumbnails">
-            {images.map((img, idx) => (
+            {displayImages.map((img, idx) => (
               <div 
                 key={idx} 
                 className={`vd_thumbnail ${selectedImage === idx ? 'vd_thumbnail_active' : ''}`}
@@ -371,13 +463,13 @@ const VehicleDetail = () => {
       </div>
 
       {/* Lightbox Modal */}
-      {isLightboxOpen && images.length > 0 && (
+      {isLightboxOpen && displayImages.length > 0 && (
         <div className="vd_lightbox" onClick={() => setIsLightboxOpen(false)}>
           <button className="vd_lightbox_close" onClick={() => setIsLightboxOpen(false)}>
             <FaTimes />
           </button>
-          <img src={images[selectedImage]} alt={vehicle.model} className="vd_lightbox_image" />
-          {hasMultipleImages && (
+          <img src={displayImages[selectedImage]} alt={vehicle.model} className="vd_lightbox_image" />
+          {displayImages.length > 1 && (
             <>
               <button className="vd_lightbox_nav vd_lightbox_prev" onClick={(e) => { e.stopPropagation(); prevImage(); }}>
                 <FaChevronLeft />
@@ -396,9 +488,9 @@ const VehicleDetail = () => {
         <div className="vd_price_section">
           <div>
             <span className="vd_price_label">Price per Day</span>
-            <div className="vd_price">{formatZAR(vehicle.pricePerDay)}</div>
+            <div className="vd_price">{formatZARPrice(vehicle.pricePerDay)}</div>
             {vehicle.pricePerKm && (
-              <div className="vd_price_note">+{formatZAR(vehicle.pricePerKm)}/km</div>
+              <div className="vd_price_note">+{formatZARPrice(vehicle.pricePerKm)}/km</div>
             )}
           </div>
           <div className={`vd_status ${statusInfo.class}`}>
@@ -784,7 +876,7 @@ const VehicleDetail = () => {
                 />
               </div>
               <button type="submit" disabled={bookingLoading} className="vd_submit_btn">
-                {bookingLoading ? 'Submitting...' : 'Submit Booking Request'}
+                {bookingLoading ? <><FaSpinner className="spinner" /> Submitting...</> : 'Submit Booking Request'}
               </button>
             </form>
           </div>
@@ -792,17 +884,7 @@ const VehicleDetail = () => {
       )}
 
       {/* Side Panel for Desktop */}
-      {livestock.length > 0 && (
-        <SidePanel
-          title="Nearby Livestock"
-          items={livestock}
-          loading={livestockLoading}
-          onItemClick={handleLivestockClick}
-          renderItem={renderLivestockItem}
-          emptyMessage={`No livestock found near ${vehicle.location}`}
-          type="livestock"
-        />
-      )}
+      
     </div>
   );
 };
