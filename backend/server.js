@@ -12,6 +12,13 @@ let server = null;
  */
 const startServer = async () => {
   try {
+    // Check if MongoDB URI is provided
+    if (!config.mongodb.uri) {
+      console.error('❌ MONGODB_URI is not defined in environment variables');
+      console.error('Please set MONGODB_URI in your Render environment variables');
+      process.exit(1);
+    }
+
     // Connect to MongoDB with retry logic
     await connectWithRetry();
     
@@ -19,14 +26,14 @@ const startServer = async () => {
     console.log(`📊 Database: ${mongoose.connection.name}`);
     console.log(`🔗 Host: ${mongoose.connection.host}`);
     
-    // Start server
-    server = app.listen(config.port, config.host, () => {
-      console.log(`🚀 Server running on ${config.host}:${config.port}`);
+    // Start server - IMPORTANT: Use 0.0.0.0 for Render
+    server = app.listen(config.port, '0.0.0.0', () => {
+      console.log(`🚀 Server running on 0.0.0.0:${config.port}`);
       console.log(`🌍 Environment: ${config.env}`);
       console.log(`📡 PID: ${process.pid}`);
       
       if (config.env === 'development') {
-        console.log(`📚 API available at http://${config.host}:${config.port}`);
+        console.log(`📚 API available at http://localhost:${config.port}`);
       }
     });
     
@@ -124,7 +131,9 @@ const setupGracefulShutdown = () => {
  */
 const startWithCluster = () => {
   // Don't use cluster in development or if explicitly disabled
+  // DISABLE_CLUSTER=true is recommended for Render's free tier
   if (config.env !== 'production' || process.env.DISABLE_CLUSTER === 'true') {
+    console.log('📌 Running in single-threaded mode (cluster disabled)');
     return startServer();
   }
   
