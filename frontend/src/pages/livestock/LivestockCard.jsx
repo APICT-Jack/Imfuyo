@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+// LivestockCard.jsx - Updated with better image handling
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { 
@@ -24,12 +25,44 @@ import './LivestockCard.css';
 // API Base URL from environment variable
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
+// Helper to get full image URL
+const getFullImageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  
+  // If it's already a full URL (starts with http or https)
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
+  }
+  
+  // If it's a relative path starting with /uploads
+  if (imagePath.startsWith('/uploads')) {
+    // Use the backend URL for uploads
+    const backendUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    return `${backendUrl}${imagePath}`;
+  }
+  
+  // If it's a relative path without /uploads
+  if (imagePath.startsWith('/')) {
+    const backendUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000';
+    return `${backendUrl}${imagePath}`;
+  }
+  
+  // If it's a Cloudinary URL or other full URL
+  if (imagePath.includes('cloudinary') || imagePath.includes('res.cloudinary')) {
+    return imagePath;
+  }
+  
+  // Default: try to use as is
+  return imagePath;
+};
+
 const LivestockCard = ({ livestock }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
+  const [imageLoadTimeout, setImageLoadTimeout] = useState(false);
   
   const isSellerVerified = livestock.seller?.isVerified;
   const showWarning = !isSellerVerified;
@@ -89,6 +122,22 @@ const LivestockCard = ({ livestock }) => {
   const currentPrice = getCurrentPrice();
   const hasVideos = livestock.videos && livestock.videos.length > 0;
 
+  // Get full image URL
+  const imageUrl = getFullImageUrl(livestock.images?.[0]);
+
+  // Set a timeout to show error if image takes too long to load
+  useEffect(() => {
+    if (imageUrl && imageLoading) {
+      const timeoutId = setTimeout(() => {
+        setImageLoadTimeout(true);
+        setImageLoading(false);
+        setImageError(true);
+      }, 10000); // 10 second timeout
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [imageUrl, imageLoading]);
+
   // Handle like/unlike with API call
   const handleLike = async (e) => {
     e.preventDefault();
@@ -98,11 +147,9 @@ const LivestockCard = ({ livestock }) => {
     
     setIsLiking(true);
     try {
-      // Get token from localStorage
       const token = localStorage.getItem('token');
       
       if (!token) {
-        // Redirect to login if not authenticated
         window.location.href = '/login';
         return;
       }
@@ -120,11 +167,9 @@ const LivestockCard = ({ livestock }) => {
       
       if (response.data.success) {
         setIsLiked(!isLiked);
-        // Optionally update the like count if available
       }
     } catch (error) {
       console.error('Error toggling like:', error);
-      // Show user-friendly error
       if (error.response?.status === 401) {
         window.location.href = '/login';
       }
@@ -142,13 +187,13 @@ const LivestockCard = ({ livestock }) => {
   // Handle image load
   const handleImageLoad = () => {
     setImageLoading(false);
+    setImageLoadTimeout(false);
   };
 
   // Handle quick view
   const handleQuickView = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    // Navigate to quick view or open modal
     window.location.href = `/livestock/${livestock._id}`;
   };
 
@@ -156,9 +201,7 @@ const LivestockCard = ({ livestock }) => {
   const handleContact = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    // Open chat or contact form
     console.log('Contact seller:', livestock.seller?._id);
-    // Could navigate to: `/messages/${livestock.seller?._id}`
   };
 
   // Handle share
@@ -181,14 +224,11 @@ const LivestockCard = ({ livestock }) => {
         }
       }
     } else {
-      // Fallback: copy to clipboard
       try {
         await navigator.clipboard.writeText(shareUrl);
         alert('Link copied to clipboard!');
       } catch (err) {
         console.error('Copy error:', err);
-        // Fallback: log the URL
-        console.log('Share URL:', shareUrl);
       }
     }
   };
@@ -201,16 +241,6 @@ const LivestockCard = ({ livestock }) => {
     }
   };
 
-  // Get image URL with fallback
-  const getImageUrl = () => {
-    if (imageError || !livestock.images || !livestock.images[0]) {
-      return null;
-    }
-    return livestock.images[0];
-  };
-
-  const imageUrl = getImageUrl();
-
   return (
     <div 
       className={`livestock-card-compact ${isExpanded ? 'expanded' : ''} ${showWarning ? 'unverified-seller-card' : ''}`}
@@ -219,11 +249,12 @@ const LivestockCard = ({ livestock }) => {
       <Link to={`/livestock/${livestock._id}`} className="card-link-compact">
         {/* IMAGE SECTION - DOMINANT */}
         <div className="card-image-compact">
-          {imageUrl ? (
+          {imageUrl && !imageError ? (
             <>
-              {imageLoading && (
+              {imageLoading && !imageLoadTimeout && (
                 <div className="image-loader">
                   <FaSpinner className="spinner" />
+                  <span className="loading-text">Loading...</span>
                 </div>
               )}
               <img 
@@ -232,7 +263,8 @@ const LivestockCard = ({ livestock }) => {
                 loading="lazy"
                 onError={handleImageError}
                 onLoad={handleImageLoad}
-                style={{ display: imageLoading ? 'none' : 'block' }}
+                style={{ display: (imageLoading && !imageLoadTimeout) ? 'none' : 'block' }}
+                crossOrigin="anonymous"
               />
             </>
           ) : (
