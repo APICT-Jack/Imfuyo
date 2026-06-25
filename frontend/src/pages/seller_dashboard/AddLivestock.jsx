@@ -18,6 +18,9 @@ import {
 } from 'react-icons/fa';
 import './AddLivestock.css';
 
+// API Base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const AddLivestock = () => {
   const { user, token, fetchUser } = useAuth();
   const navigate = useNavigate();
@@ -125,15 +128,17 @@ const AddLivestock = () => {
     
     try {
       const uploadedUrls = [];
+      const token = localStorage.getItem('token');
+      
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const formDataImg = new FormData();
         formDataImg.append('image', file);
         
-        const response = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/upload/image`, formDataImg, {
+        const response = await axios.post(`${API_BASE_URL}/upload/image`, formDataImg, {
           headers: {
             'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
         uploadedUrls.push(response.data.url);
@@ -148,6 +153,10 @@ const AddLivestock = () => {
     } catch (error) {
       console.error('Upload error:', error);
       setError('Error uploading images. Please try again.');
+      if (error.response?.status === 401) {
+        setError('Your session has expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+      }
     } finally {
       setUploadingImages(false);
       setUploadProgress(0);
@@ -166,15 +175,17 @@ const AddLivestock = () => {
     
     try {
       const uploadedUrls = [];
+      const token = localStorage.getItem('token');
+      
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const formDataVideo = new FormData();
         formDataVideo.append('video', file);
         
-        const response = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/upload/video`, formDataVideo, {
+        const response = await axios.post(`${API_BASE_URL}/upload/video`, formDataVideo, {
           headers: {
             'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
+            'Authorization': `Bearer ${token}`
           }
         });
         uploadedUrls.push(response.data.url);
@@ -186,6 +197,10 @@ const AddLivestock = () => {
     } catch (error) {
       console.error('Video upload error:', error);
       setError('Error uploading videos. Please try again.');
+      if (error.response?.status === 401) {
+        setError('Your session has expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+      }
     } finally {
       setUploadingVideos(false);
       setUploadProgress(0);
@@ -305,7 +320,7 @@ const AddLivestock = () => {
       setDebugInfo(`Sending: ${JSON.stringify(submitData, null, 2)}`);
       
       const currentToken = localStorage.getItem('token');
-      const response = await axios.post(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/livestock`, submitData, {
+      const response = await axios.post(`${API_BASE_URL}/livestock`, submitData, {
         headers: {
           'Authorization': `Bearer ${currentToken}`,
           'Content-Type': 'application/json'

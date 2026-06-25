@@ -5,6 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 import { FaSpinner, FaCloudUploadAlt, FaTrash, FaTruck, FaInfoCircle } from 'react-icons/fa';
 import './AddVehicle.css';
 
+// API Base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const EditVehicle = () => {
   const { id } = useParams();
   const { user, token } = useAuth();
@@ -34,7 +37,7 @@ const EditVehicle = () => {
 
   const fetchVehicle = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/vehicles/${id}`);
+      const response = await axios.get(`${API_BASE_URL}/vehicles/${id}`);
       const vehicle = response.data;
       
       setFormData({
@@ -53,6 +56,10 @@ const EditVehicle = () => {
     } catch (error) {
       console.error('Error fetching vehicle:', error);
       setError('Failed to load vehicle details');
+      if (error.response?.status === 401) {
+        setError('Your session has expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+      }
     } finally {
       setLoading(false);
     }
@@ -82,9 +89,11 @@ const EditVehicle = () => {
     });
     
     try {
-      const response = await axios.post('http://localhost:5000/api/upload/images', formDataImg, {
+      const currentToken = localStorage.getItem('token');
+      const response = await axios.post(`${API_BASE_URL}/upload/images`, formDataImg, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${currentToken}`
         },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -96,6 +105,10 @@ const EditVehicle = () => {
     } catch (error) {
       console.error('Upload error:', error);
       setError('Error uploading images. Please try again.');
+      if (error.response?.status === 401) {
+        setError('Your session has expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+      }
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -136,9 +149,10 @@ const EditVehicle = () => {
         available: formData.available
       };
       
-      const response = await axios.put(`http://localhost:5000/api/vehicles/${id}`, submitData, {
+      const currentToken = localStorage.getItem('token');
+      const response = await axios.put(`${API_BASE_URL}/vehicles/${id}`, submitData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${currentToken}`,
           'Content-Type': 'application/json'
         }
       });
@@ -147,7 +161,12 @@ const EditVehicle = () => {
       navigate('/seller/dashboard');
     } catch (error) {
       console.error('Update error:', error);
-      setError(error.response?.data?.message || 'Error updating vehicle. Please try again.');
+      if (error.response?.status === 401) {
+        setError('Your session has expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+      } else {
+        setError(error.response?.data?.message || 'Error updating vehicle. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }

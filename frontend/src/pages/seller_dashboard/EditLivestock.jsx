@@ -5,6 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 import { FaSpinner, FaCloudUploadAlt, FaTrash, FaPaw, FaInfoCircle } from 'react-icons/fa';
 import './AddLivestock.css';
 
+// API Base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const EditLivestock = () => {
   const { id } = useParams();
   const { user, token } = useAuth();
@@ -37,7 +40,7 @@ const EditLivestock = () => {
 
   const fetchLivestock = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/livestock/${id}`);
+      const response = await axios.get(`${API_BASE_URL}/livestock/${id}`);
       const livestock = response.data;
       
       setFormData({
@@ -59,6 +62,10 @@ const EditLivestock = () => {
     } catch (error) {
       console.error('Error fetching livestock:', error);
       setError('Failed to load listing details');
+      if (error.response?.status === 401) {
+        setError('Your session has expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+      }
     } finally {
       setLoading(false);
     }
@@ -88,9 +95,11 @@ const EditLivestock = () => {
     });
     
     try {
-      const response = await axios.post('http://localhost:5000/api/upload/images', formDataImg, {
+      const currentToken = localStorage.getItem('token');
+      const response = await axios.post(`${API_BASE_URL}/upload/images`, formDataImg, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${currentToken}`
         },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -102,6 +111,10 @@ const EditLivestock = () => {
     } catch (error) {
       console.error('Upload error:', error);
       setError('Error uploading images. Please try again.');
+      if (error.response?.status === 401) {
+        setError('Your session has expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+      }
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -141,9 +154,10 @@ const EditLivestock = () => {
         orderType: formData.orderType
       };
       
-      const response = await axios.put(`http://localhost:5000/api/livestock/${id}`, submitData, {
+      const currentToken = localStorage.getItem('token');
+      const response = await axios.put(`${API_BASE_URL}/livestock/${id}`, submitData, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${currentToken}`,
           'Content-Type': 'application/json'
         }
       });
@@ -152,7 +166,12 @@ const EditLivestock = () => {
       navigate('/seller/dashboard');
     } catch (error) {
       console.error('Update error:', error);
-      setError(error.response?.data?.message || 'Error updating listing. Please try again.');
+      if (error.response?.status === 401) {
+        setError('Your session has expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+      } else {
+        setError(error.response?.data?.message || 'Error updating listing. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }

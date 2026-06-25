@@ -11,6 +11,9 @@ import {
 } from 'react-icons/fa';
 import './SellerDashboard.css';
 
+// API Base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const SellerDashboard = () => {
   const { user, token, fetchUser } = useAuth();
   const navigate = useNavigate();
@@ -59,15 +62,16 @@ const SellerDashboard = () => {
   const fetchSellerData = async () => {
     try {
       setLoading(true);
+      const currentToken = localStorage.getItem('token') || token;
       
       // Fetch authenticated user's livestock
-      const livestockRes = await axios.get('http://localhost:5000/api/livestock/user/my-listings', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const livestockRes = await axios.get(`${API_BASE_URL}/livestock/user/my-listings`, {
+        headers: { 'Authorization': `Bearer ${currentToken}` }
       });
       
       // Fetch authenticated user's vehicles
-      const vehiclesRes = await axios.get('http://localhost:5000/api/vehicles/me', {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const vehiclesRes = await axios.get(`${API_BASE_URL}/vehicles/me`, {
+        headers: { 'Authorization': `Bearer ${currentToken}` }
       });
       
       const livestockData = livestockRes.data.livestock || [];
@@ -204,14 +208,16 @@ const SellerDashboard = () => {
     
     setDeleting(true);
     try {
+      const currentToken = localStorage.getItem('token') || token;
+      
       if (itemType === 'livestock') {
-        await axios.delete(`http://localhost:5000/api/livestock/${itemToDelete._id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        await axios.delete(`${API_BASE_URL}/livestock/${itemToDelete._id}`, {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
         });
         setListings(listings.filter(l => l._id !== itemToDelete._id));
       } else {
-        await axios.delete(`http://localhost:5000/api/vehicles/${itemToDelete._id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+        await axios.delete(`${API_BASE_URL}/vehicles/${itemToDelete._id}`, {
+          headers: { 'Authorization': `Bearer ${currentToken}` }
         });
         setVehicles(vehicles.filter(v => v._id !== itemToDelete._id));
       }

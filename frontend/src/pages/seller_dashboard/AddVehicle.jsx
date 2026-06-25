@@ -5,6 +5,9 @@ import { useAuth } from '../../context/AuthContext';
 import { FaExclamationTriangle, FaInfoCircle, FaCheckCircle, FaSpinner, FaCloudUploadAlt, FaTrash, FaTruck } from 'react-icons/fa';
 import './AddVehicle.css';
 
+// API Base URL from environment variable
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
 const AddVehicle = () => {
   const { user, token } = useAuth();
   const navigate = useNavigate();
@@ -77,9 +80,11 @@ const AddVehicle = () => {
     });
     
     try {
-      const response = await axios.post('http://localhost:5000/api/upload/images', formDataImg, {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(`${API_BASE_URL}/upload/images`, formDataImg, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
         },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
@@ -91,6 +96,10 @@ const AddVehicle = () => {
     } catch (error) {
       console.error('Upload error:', error);
       setError('Error uploading images. Please try again.');
+      if (error.response?.status === 401) {
+        setError('Your session has expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+      }
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -135,7 +144,7 @@ const AddVehicle = () => {
       console.log('Submitting vehicle data:', submitData);
       
       const currentToken = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:5000/api/vehicles', submitData, {
+      const response = await axios.post(`${API_BASE_URL}/vehicles`, submitData, {
         headers: {
           'Authorization': `Bearer ${currentToken}`,
           'Content-Type': 'application/json'
