@@ -734,25 +734,7 @@ const LivestockDetail = () => {
         </div>
       )}
 
-      {/* Side Panel for Desktop */}
-      {vehicles.length > 0 && (
-        <SidePanel
-          title="Transport Options"
-          items={vehicles}
-          loading={vehiclesLoading}
-          onItemClick={handleVehicleClick}
-          renderItem={(vehicle) => (
-            <div className="ld_side_panel_item">
-              <div className="ld_side_panel_icon">{getVehicleIcon(vehicle.type)}</div>
-              <div className="ld_side_panel_info">
-                <div className="ld_side_panel_name">{vehicle.model || vehicle.name}</div>
-                <div className="ld_side_panel_price">{formatZARPrice(vehicle.pricePerDay)}/day</div>
-              </div>
-            </div>
-          )}
-          emptyMessage={`No vehicles found near ${livestock.location}`}
-        />
-      )}
+      
     </div>
   );
 };
