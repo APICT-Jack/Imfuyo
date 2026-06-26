@@ -24,7 +24,7 @@ const Login = () => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>IMFuyo Admin</h1>
+          <h1>Imfuyo Admin</h1>
           <p>Admin Dashboard Login</p>
         </div>
         <form onSubmit={handleSubmit} className="login-form">

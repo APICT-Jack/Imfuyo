@@ -1845,4 +1845,46 @@
   .ld_modal_bid_amount {
     font-size: 28px;
   }
+}/* ==================== VERIFICATION WARNING IN DETAILS ==================== */
+
+.ld_warning_in_details {
+  margin: 16px 0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  background: #fffbeb;
+  border: 1px solid #f6e05e;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.ld_warning_in_details svg {
+  color: #dd6b20;
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ld_warning_in_details strong {
+  color: #744210;
+  font-size: 15px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.ld_warning_in_details p {
+  color: #975a16;
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ==================== INFO GRID VERIFICATION STATUS ==================== */
+
+.ld_info_value .verified-text {
+  color: #38a169;
+}
+
+.ld_info_value .unverified-text {
+  color: #dd6b20;
 }
