@@ -1,5 +1,5 @@
-// LivestockDetail.jsx - Updated with environment variables and error handling
-import React, { useState, useEffect, useRef } from 'react';
+// LivestockDetail.jsx - Updated with bidding functionality and real-time updates
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
@@ -10,12 +10,12 @@ import {
   FaWhatsapp, FaRegHeart, FaHeart as FaHeartSolid, FaShareAlt,
   FaUserCheck, FaUserShield, FaStar, FaStarHalfAlt, FaRegStar,
   FaChevronLeft, FaChevronRight, FaExpand, FaTimes, FaCheck,
-  FaClock, FaTag, FaStore, FaIdCard, FaSpinner
+  FaClock, FaTag, FaStore, FaIdCard, FaSpinner, FaGavel, 
+  FaHistory, FaTrophy, FaUser, FaBolt
 } from 'react-icons/fa';
 import SidePanel from '.././SidePanel';
 import './LivestockDetail.css';
 
-// API Base URL from environment variable
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 const LivestockDetail = () => {
@@ -37,20 +37,156 @@ const LivestockDetail = () => {
   const [showContactOptions, setShowContactOptions] = useState(false);
   const [imageErrors, setImageErrors] = useState({});
   const [imageLoading, setImageLoading] = useState({});
+  const [user, setUser] = useState(null);
   
+  // Bidding state
+  const [bidAmount, setBidAmount] = useState('');
+  const [isPlacingBid, setIsPlacingBid] = useState(false);
+  const [bidError, setBidError] = useState(null);
+  const [bidSuccess, setBidSuccess] = useState(null);
+  const [bidHistory, setBidHistory] = useState([]);
+  const [showBidHistory, setShowBidHistory] = useState(false);
+  const [currentBid, setCurrentBid] = useState(null);
+  const [timeRemaining, setTimeRemaining] = useState(null);
+  const [isBidEnded, setIsBidEnded] = useState(false);
+  const [showBidConfirmation, setShowBidConfirmation] = useState(false);
+  const [confirmBidAmount, setConfirmBidAmount] = useState(null);
+  
+  // Refs
   const galleryRef = useRef(null);
   const detailRef = useRef(null);
+  const bidInputRef = useRef(null);
+  const timerIntervalRef = useRef(null);
 
+  // Fetch user on mount
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const userData = JSON.parse(localStorage.getItem('user') || '{}');
+        setUser(userData);
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+  }, []);
+
+  // Main data fetch
   useEffect(() => {
     fetchLivestock();
+    fetchBidHistory();
     window.scrollTo(0, 0);
+    
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
   }, [id]);
 
+  // Fetch nearby vehicles when livestock loads
   useEffect(() => {
     if (livestock && livestock.location) {
       fetchNearbyVehicles();
     }
   }, [livestock]);
+
+  // Timer for bid countdown
+  useEffect(() => {
+    if (livestock && livestock.orderType === 'bid' && livestock.bidDetails) {
+      const endTime = new Date(livestock.bidDetails.bidEndTime);
+      const now = new Date();
+      
+      if (endTime > now) {
+        setIsBidEnded(false);
+        updateTimeRemaining();
+        
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+        }
+        
+        timerIntervalRef.current = setInterval(() => {
+          updateTimeRemaining();
+        }, 1000);
+      } else {
+        setIsBidEnded(true);
+        setTimeRemaining('Ended');
+        if (timerIntervalRef.current) {
+          clearInterval(timerIntervalRef.current);
+        }
+      }
+    }
+    
+    return () => {
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+    };
+  }, [livestock]);
+
+  // Real-time bid updates via polling
+  useEffect(() => {
+    if (livestock && livestock.orderType === 'bid' && !isBidEnded) {
+      const pollInterval = setInterval(() => {
+        fetchLatestBidInfo();
+      }, 10000); // Poll every 10 seconds
+      
+      return () => clearInterval(pollInterval);
+    }
+  }, [livestock, isBidEnded]);
+
+  const updateTimeRemaining = () => {
+    if (!livestock || !livestock.bidDetails) return;
+    
+    const endTime = new Date(livestock.bidDetails.bidEndTime);
+    const now = new Date();
+    const diff = endTime - now;
+    
+    if (diff <= 0) {
+      setIsBidEnded(true);
+      setTimeRemaining('Ended');
+      if (timerIntervalRef.current) {
+        clearInterval(timerIntervalRef.current);
+      }
+      return;
+    }
+    
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    let timeStr = '';
+    if (days > 0) {
+      timeStr = `${days}d ${hours}h ${minutes}m ${seconds}s`;
+    } else if (hours > 0) {
+      timeStr = `${hours}h ${minutes}m ${seconds}s`;
+    } else {
+      timeStr = `${minutes}m ${seconds}s`;
+    }
+    
+    setTimeRemaining(timeStr);
+  };
+
+  const fetchLatestBidInfo = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/livestock/${id}/bidding-history`);
+      if (response.data) {
+        setCurrentBid(response.data.currentBid);
+        setBidHistory(response.data.bidHistory || []);
+        
+        // Check if bid end time has passed
+        if (response.data.bidEndTime) {
+          const endTime = new Date(response.data.bidEndTime);
+          if (new Date() > endTime) {
+            setIsBidEnded(true);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching latest bid info:', error);
+    }
+  };
 
   const fetchLivestock = async () => {
     try {
@@ -58,6 +194,25 @@ const LivestockDetail = () => {
       const response = await axios.get(`${API_BASE_URL}/livestock/${id}`);
       setLivestock(response.data);
       setError(null);
+      
+      // Initialize bid state
+      if (response.data.orderType === 'bid') {
+        setCurrentBid(response.data.bidDetails?.currentBid || response.data.bidDetails?.startingBid);
+        setBidHistory(response.data.bidDetails?.bidHistory || []);
+        setBidAmount(response.data.bidDetails?.currentBid ? 
+          (response.data.bidDetails.currentBid + (response.data.bidDetails.minimumIncrement || 0)).toString() : 
+          (response.data.bidDetails?.startingBid || 0).toString()
+        );
+        
+        // Check if bid ended
+        if (response.data.bidDetails?.bidEndTime) {
+          const endTime = new Date(response.data.bidDetails.bidEndTime);
+          if (new Date() > endTime) {
+            setIsBidEnded(true);
+            setTimeRemaining('Ended');
+          }
+        }
+      }
     } catch (error) {
       console.error('Error fetching livestock:', error);
       if (error.response?.status === 404) {
@@ -67,6 +222,15 @@ const LivestockDetail = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBidHistory = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/livestock/${id}/bidding-history`);
+      setBidHistory(response.data.bidHistory || []);
+    } catch (error) {
+      console.error('Error fetching bid history:', error);
     }
   };
 
@@ -95,7 +259,7 @@ const LivestockDetail = () => {
   };
 
   const formatZARPrice = (price) => {
-    if (!price) return 'POA';
+    if (!price && price !== 0) return 'POA';
     return new Intl.NumberFormat('en-ZA', {
       style: 'currency',
       currency: 'ZAR',
@@ -110,6 +274,17 @@ const LivestockDetail = () => {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
+    });
+  };
+
+  const formatDateTime = (date) => {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString('en-ZA', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
@@ -168,7 +343,6 @@ const LivestockDetail = () => {
         alert('Link copied to clipboard!');
       } catch (err) {
         console.error('Copy error:', err);
-        // Fallback
         const input = document.createElement('input');
         input.value = window.location.href;
         document.body.appendChild(input);
@@ -253,6 +427,112 @@ const LivestockDetail = () => {
     setImageLoading(prev => ({ ...prev, [index]: false }));
   };
 
+  // ==================== BIDDING FUNCTIONS ====================
+  
+  const handleBidInputChange = (e) => {
+    const value = e.target.value.replace(/[^0-9.]/g, '');
+    setBidAmount(value);
+    setBidError(null);
+    setBidSuccess(null);
+  };
+
+  const getMinimumBid = () => {
+    if (!livestock || livestock.orderType !== 'bid') return 0;
+    
+    const currentBidValue = livestock.bidDetails?.currentBid || livestock.bidDetails?.startingBid || 0;
+    const increment = livestock.bidDetails?.minimumIncrement || (currentBidValue * 0.05);
+    return currentBidValue + increment;
+  };
+
+  const getStartingBid = () => {
+    return livestock?.bidDetails?.startingBid || 0;
+  };
+
+  const handlePlaceBid = () => {
+    const amount = parseFloat(bidAmount);
+    const minBid = getMinimumBid();
+    
+    if (!amount || isNaN(amount) || amount <= 0) {
+      setBidError('Please enter a valid bid amount');
+      return;
+    }
+    
+    if (amount < minBid) {
+      setBidError(`Minimum bid is ${formatZARPrice(minBid)}`);
+      return;
+    }
+    
+    // Show confirmation
+    setConfirmBidAmount(amount);
+    setShowBidConfirmation(true);
+  };
+
+  const confirmPlaceBid = async () => {
+    if (!confirmBidAmount) return;
+    
+    setIsPlacingBid(true);
+    setBidError(null);
+    setBidSuccess(null);
+    
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const response = await axios.post(
+        `${API_BASE_URL}/livestock/${livestock._id}/bid`,
+        { bidAmount: confirmBidAmount },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data) {
+        setBidSuccess(`Bid of ${formatZARPrice(confirmBidAmount)} placed successfully!`);
+        setCurrentBid(confirmBidAmount);
+        setShowBidConfirmation(false);
+        setConfirmBidAmount(null);
+        
+        // Update livestock data
+        await fetchLivestock();
+        
+        // Update bid history
+        await fetchBidHistory();
+        
+        // Set new bid amount for next bid
+        const newMinBid = confirmBidAmount + (livestock.bidDetails?.minimumIncrement || (confirmBidAmount * 0.05));
+        setBidAmount(newMinBid.toString());
+        
+        // Clear success message after 5 seconds
+        setTimeout(() => {
+          setBidSuccess(null);
+        }, 5000);
+      }
+    } catch (error) {
+      console.error('Error placing bid:', error);
+      setBidError(error.response?.data?.message || 'Failed to place bid. Please try again.');
+    } finally {
+      setIsPlacingBid(false);
+    }
+  };
+
+  const cancelBidConfirmation = () => {
+    setShowBidConfirmation(false);
+    setConfirmBidAmount(null);
+  };
+
+  // Calculate bidder rank
+  const getBidderRank = (index) => {
+    if (index === 0) return '🏆';
+    if (index === 1) return '🥈';
+    if (index === 2) return '🥉';
+    return `#${index + 1}`;
+  };
+
   const renderStars = (rating) => {
     if (!rating) return null;
     
@@ -270,6 +550,24 @@ const LivestockDetail = () => {
       stars.push(<FaRegStar key={stars.length} color="#FFD700" />);
     }
     return stars;
+  };
+
+  const isOwnListing = () => {
+    if (!user || !livestock) return false;
+    return user._id === livestock.seller?._id || user._id === livestock.seller;
+  };
+
+  const canBid = () => {
+    if (!user) return false;
+    if (isOwnListing()) return false;
+    if (isBidEnded) return false;
+    if (livestock?.status === 'sold') return false;
+    if (livestock?.status === 'reserved') return false;
+    return true;
+  };
+
+  const canViewBidHistory = () => {
+    return bidHistory && bidHistory.length > 0;
   };
 
   if (loading) {
@@ -298,6 +596,9 @@ const LivestockDetail = () => {
   const sellerRating = livestock.seller?.rating;
   const hasMultipleImages = livestock.images && livestock.images.length > 1;
   const displayImages = livestock.images?.filter((_, idx) => !imageErrors[idx]) || [];
+  const isBidType = livestock.orderType === 'bid';
+  const minBid = getMinimumBid();
+  const isSold = livestock.status === 'sold' || livestock.status === 'reserved';
 
   return (
     <div className="ld_page">
@@ -405,14 +706,170 @@ const LivestockDetail = () => {
         {/* Price & Status */}
         <div className="ld_price_section">
           <div>
-            <span className="ld_price_label">Price</span>
-            <div className="ld_price">{formatZARPrice(livestock.price)}</div>
+            <span className="ld_price_label">
+              {isBidType ? 'Current Bid' : 'Price'}
+            </span>
+            <div className="ld_price">
+              {isBidType ? formatZARPrice(currentBid || livestock.bidDetails?.startingBid) : formatZARPrice(livestock.price)}
+              {isBidType && livestock.bidDetails?.startingBid && (
+                <span className="ld_starting_bid_label">
+                  (Starting: {formatZARPrice(livestock.bidDetails.startingBid)})
+                </span>
+              )}
+            </div>
+            {isBidType && livestock.bidDetails?.reservePrice && (
+              <div className="ld_reserve_info">
+                {livestock.bidDetails.reserveMet ? (
+                  <span className="ld_reserve_met">✅ Reserve met</span>
+                ) : (
+                  <span className="ld_reserve_not_met">⚠️ Reserve not yet met</span>
+                )}
+              </div>
+            )}
           </div>
           <div className={`ld_status ld_status_${livestock.status || 'available'}`}>
             {livestock.status === 'available' && <FaCheck />}
+            {livestock.status === 'on_bid' && <FaGavel />}
             {(livestock.status || 'AVAILABLE').toUpperCase()}
           </div>
         </div>
+
+        {/* Bid Timer - Show for bid listings */}
+        {isBidType && !isSold && (
+          <div className={`ld_bid_timer ${isBidEnded ? 'ld_bid_ended' : ''}`}>
+            <div className="ld_timer_icon">
+              <FaClock />
+            </div>
+            <div className="ld_timer_info">
+              <span className="ld_timer_label">{isBidEnded ? 'Bidding Ended' : 'Time Remaining'}</span>
+              <span className="ld_timer_value">
+                {isBidEnded ? 'This auction has ended' : timeRemaining || 'Loading...'}
+              </span>
+            </div>
+            {!isBidEnded && (
+              <div className="ld_bid_count">
+                <FaGavel />
+                <span>{bidHistory?.length || 0} bids</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Bidding Section */}
+        {isBidType && !isSold && (
+          <div className="ld_bid_section">
+            <div className="ld_bid_header">
+              <h3 className="ld_bid_title">
+                <FaGavel className="ld_bid_icon" /> Place Your Bid
+              </h3>
+              {canViewBidHistory() && (
+                <button 
+                  className="ld_view_history_btn" 
+                  onClick={() => setShowBidHistory(!showBidHistory)}
+                >
+                  <FaHistory /> {showBidHistory ? 'Hide History' : 'View History'}
+                </button>
+              )}
+            </div>
+
+            {/* Bid History */}
+            {showBidHistory && canViewBidHistory() && (
+              <div className="ld_bid_history_panel">
+                <h4>Bidding History</h4>
+                <div className="ld_bid_history_list">
+                  {bidHistory.slice().reverse().map((bid, idx) => (
+                    <div key={idx} className="ld_bid_history_item">
+                      <span className="ld_bidder_rank">{getBidderRank(bidHistory.length - 1 - idx)}</span>
+                      <span className="ld_bidder_name">
+                        {bid.bidder?.businessName || bid.bidder?.name || 'Anonymous'}
+                      </span>
+                      <span className="ld_bid_amount">{formatZARPrice(bid.amount)}</span>
+                      <span className="ld_bid_time">{formatDateTime(bid.timestamp)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Bid Error/Success Messages */}
+            {bidError && (
+              <div className="ld_bid_error">{bidError}</div>
+            )}
+            {bidSuccess && (
+              <div className="ld_bid_success">{bidSuccess}</div>
+            )}
+
+            {/* Bid Input */}
+            {!isBidEnded && !isSold && (
+              <div className="ld_bid_input_group">
+                <div className="ld_bid_input_wrapper">
+                  <span className="ld_bid_currency">R</span>
+                  <input
+                    ref={bidInputRef}
+                    type="text"
+                    className="ld_bid_input"
+                    value={bidAmount}
+                    onChange={handleBidInputChange}
+                    placeholder={`Min: ${formatZARPrice(minBid)}`}
+                    disabled={isPlacingBid || !canBid() || isBidEnded || isSold}
+                  />
+                </div>
+                <button
+                  className="ld_bid_button"
+                  onClick={handlePlaceBid}
+                  disabled={isPlacingBid || !canBid() || isBidEnded || isSold}
+                >
+                  {isPlacingBid ? (
+                    <><FaSpinner className="spinner" /> Placing Bid...</>
+                  ) : (
+                    <><FaGavel /> Place Bid</>
+                  )}
+                </button>
+              </div>
+            )}
+
+            {/* Bid Info */}
+            <div className="ld_bid_info">
+              {!isBidEnded && !isSold && (
+                <>
+                  <div className="ld_bid_info_item">
+                    <span>Minimum bid</span>
+                    <strong>{formatZARPrice(minBid)}</strong>
+                  </div>
+                  <div className="ld_bid_info_item">
+                    <span>Current highest</span>
+                    <strong>{formatZARPrice(currentBid || livestock.bidDetails?.startingBid)}</strong>
+                  </div>
+                </>
+              )}
+              {isBidEnded && !isSold && (
+                <div className="ld_bid_ended_message">
+                  <FaExclamationTriangle /> This auction has ended. The highest bidder will be contacted.
+                </div>
+              )}
+              {isSold && (
+                <div className="ld_bid_sold_message">
+                  <FaCheckCircle /> This item has been sold.
+                </div>
+              )}
+              {isOwnListing() && isBidType && !isSold && (
+                <div className="ld_own_listing_warning">
+                  <FaInfoCircle /> You cannot bid on your own listing.
+                </div>
+              )}
+              {!user && isBidType && !isSold && (
+                <div className="ld_login_to_bid">
+                  <button 
+                    className="ld_login_bid_btn"
+                    onClick={() => navigate('/login')}
+                  >
+                    Login to place a bid
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Title & Location */}
         <h1 className="ld_title">{livestock.breed || 'Livestock'}</h1>
@@ -460,6 +917,16 @@ const LivestockDetail = () => {
               </div>
             </div>
           )}
+
+          {isBidType && (
+            <div className="ld_metric_card">
+              <FaGavel className="ld_metric_icon" />
+              <div>
+                <div className="ld_metric_label">Bids</div>
+                <div className="ld_metric_value">{bidHistory?.length || 0}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tags */}
@@ -477,6 +944,11 @@ const LivestockDetail = () => {
           {livestock.registered && (
             <span className="ld_tag ld_tag_primary">
               <FaIdCard /> Registered
+            </span>
+          )}
+          {isBidType && (
+            <span className="ld_tag ld_tag_bid">
+              <FaGavel /> Auction
             </span>
           )}
         </div>
@@ -501,6 +973,14 @@ const LivestockDetail = () => {
           >
             Transport
           </button>
+          {isBidType && canViewBidHistory() && (
+            <button 
+              className={`ld_tab ${activeTab === 'bids' ? 'ld_tab_active' : ''}`}
+              onClick={() => setActiveTab('bids')}
+            >
+              <FaHistory /> Bids
+            </button>
+          )}
         </div>
 
         {/* Tab Content */}
@@ -535,6 +1015,15 @@ const LivestockDetail = () => {
                       <div>
                         <div className="ld_info_label">Listed On</div>
                         <div className="ld_info_value">{formatDate(livestock.createdAt)}</div>
+                      </div>
+                    </div>
+                  )}
+                  {isBidType && livestock.bidDetails?.bidEndTime && (
+                    <div className="ld_info_item">
+                      <FaGavel className="ld_info_icon" />
+                      <div>
+                        <div className="ld_info_label">Auction Ends</div>
+                        <div className="ld_info_value">{formatDateTime(livestock.bidDetails.bidEndTime)}</div>
                       </div>
                     </div>
                   )}
@@ -680,6 +1169,54 @@ const LivestockDetail = () => {
               )}
             </div>
           )}
+
+          {/* Bids Tab */}
+          {activeTab === 'bids' && isBidType && (
+            <div className="ld_bids_tab">
+              <div className="ld_bids_summary">
+                <div className="ld_bids_stat">
+                  <span>Total Bids</span>
+                  <strong>{bidHistory?.length || 0}</strong>
+                </div>
+                <div className="ld_bids_stat">
+                  <span>Current Bid</span>
+                  <strong>{formatZARPrice(currentBid || livestock.bidDetails?.startingBid)}</strong>
+                </div>
+                <div className="ld_bids_stat">
+                  <span>Starting Bid</span>
+                  <strong>{formatZARPrice(livestock.bidDetails?.startingBid)}</strong>
+                </div>
+              </div>
+
+              {canViewBidHistory() ? (
+                <div className="ld_bid_history_full">
+                  <h4>All Bids</h4>
+                  <div className="ld_bid_history_list_full">
+                    {bidHistory.slice().reverse().map((bid, idx) => (
+                      <div key={idx} className="ld_bid_history_item_full">
+                        <div className="ld_bid_history_bidder">
+                          <span className="ld_bid_history_rank">{getBidderRank(bidHistory.length - 1 - idx)}</span>
+                          <span className="ld_bid_history_name">
+                            {bid.bidder?.businessName || bid.bidder?.name || 'Anonymous'}
+                          </span>
+                        </div>
+                        <div className="ld_bid_history_details">
+                          <span className="ld_bid_history_amount">{formatZARPrice(bid.amount)}</span>
+                          <span className="ld_bid_history_time">{formatDateTime(bid.timestamp)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="ld_no_bids">
+                  <FaGavel />
+                  <p>No bids have been placed yet</p>
+                  <p className="ld_no_bids_sub">Be the first to bid on this item!</p>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Listing Footer */}
@@ -693,17 +1230,62 @@ const LivestockDetail = () => {
 
       {/* Mobile Action Buttons */}
       <div className="ld_mobile_actions">
+        {isBidType && !isSold && !isBidEnded && canBid() && (
+          <button 
+            className="ld_action_btn ld_action_bid" 
+            onClick={() => {
+              if (bidInputRef.current) {
+                bidInputRef.current.focus();
+              }
+            }}
+          >
+            <FaGavel /> Place Bid
+          </button>
+        )}
         {livestock.seller?.phone && (
           <button className="ld_action_btn ld_action_primary" onClick={() => setShowContactOptions(true)}>
             <FaWhatsapp /> Contact Seller
           </button>
         )}
-        {livestock.status === 'available' && (
-          <button className="ld_action_btn ld_action_secondary">
-            <FaComments /> Make Offer
-          </button>
-        )}
       </div>
+
+      {/* Bid Confirmation Modal */}
+      {showBidConfirmation && (
+        <div className="ld_modal" onClick={cancelBidConfirmation}>
+          <div className="ld_modal_content ld_modal_bid" onClick={(e) => e.stopPropagation()}>
+            <h3 className="ld_modal_title">Confirm Your Bid</h3>
+            <div className="ld_modal_bid_details">
+              <p>You are about to place a bid of</p>
+              <div className="ld_modal_bid_amount">{formatZARPrice(confirmBidAmount)}</div>
+              {livestock.bidDetails?.reservePrice && !livestock.bidDetails.reserveMet && (
+                <div className="ld_modal_reserve_warning">
+                  <FaExclamationTriangle /> 
+                  Reserve price of {formatZARPrice(livestock.bidDetails.reservePrice)} not yet met
+                </div>
+              )}
+              <p className="ld_modal_bid_note">
+                By placing this bid, you agree to purchase this item if you win the auction.
+              </p>
+            </div>
+            <div className="ld_modal_options">
+              <button className="ld_modal_option ld_modal_cancel" onClick={cancelBidConfirmation}>
+                Cancel
+              </button>
+              <button 
+                className="ld_modal_option ld_modal_confirm" 
+                onClick={confirmPlaceBid}
+                disabled={isPlacingBid}
+              >
+                {isPlacingBid ? (
+                  <><FaSpinner className="spinner" /> Placing...</>
+                ) : (
+                  'Confirm Bid'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Contact Options Modal */}
       {showContactOptions && (
@@ -733,8 +1315,6 @@ const LivestockDetail = () => {
           </div>
         </div>
       )}
-
-      
     </div>
   );
 };
