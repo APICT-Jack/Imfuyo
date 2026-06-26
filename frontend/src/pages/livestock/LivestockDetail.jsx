@@ -5,7 +5,7 @@ import axios from 'axios';
 import { 
   FaMapMarkerAlt, FaCalendar, FaWeightHanging, FaShieldAlt, 
   FaExclamationTriangle, FaCheckCircle, FaPhone, FaEnvelope, 
-  FaShare, FaComments, FaArrowLeft, FaBuilding,
+  FaShareAlt, FaComments, FaArrowLeft, FaBuilding,
   FaTruck, FaCar, FaMotorcycle, FaShip, FaPlane, FaInfoCircle,
   FaWhatsapp, FaUserCheck, FaUserShield, FaStar, FaStarHalfAlt, FaRegStar,
   FaChevronLeft, FaChevronRight, FaExpand, FaTimes, FaCheck,
