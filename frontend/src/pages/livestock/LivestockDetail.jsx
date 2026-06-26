@@ -1,13 +1,14 @@
-// LivestockDetail.jsx - Updated with bidding functionality, no save button, verification in details tab
+// LivestockDetail.jsx - Updated with bidding functionality and real-time updates
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   FaMapMarkerAlt, FaCalendar, FaWeightHanging, FaShieldAlt, 
   FaExclamationTriangle, FaCheckCircle, FaPhone, FaEnvelope, 
-  FaShareAlt, FaComments, FaArrowLeft, FaBuilding,
+  FaShare, FaHeart, FaComments, FaArrowLeft, FaBuilding,
   FaTruck, FaCar, FaMotorcycle, FaShip, FaPlane, FaInfoCircle,
-  FaWhatsapp, FaUserCheck, FaUserShield, FaStar, FaStarHalfAlt, FaRegStar,
+  FaWhatsapp, FaRegHeart, FaHeart as FaHeartSolid, FaShareAlt,
+  FaUserCheck, FaUserShield, FaStar, FaStarHalfAlt, FaRegStar,
   FaChevronLeft, FaChevronRight, FaExpand, FaTimes, FaCheck,
   FaClock, FaTag, FaStore, FaIdCard, FaSpinner, FaGavel, 
   FaHistory, FaTrophy, FaUser, FaBolt
@@ -25,6 +26,8 @@ const LivestockDetail = () => {
   const [livestock, setLivestock] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [vehicles, setVehicles] = useState([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(false);
   const [searchMessage, setSearchMessage] = useState(null);
@@ -351,6 +354,43 @@ const LivestockDetail = () => {
     }
   };
 
+  const handleSave = async () => {
+    if (isSaving) return;
+    
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const endpoint = isSaved ? 'unlike' : 'like';
+      const response = await axios.post(
+        `${API_BASE_URL}/livestock/${livestock._id}/${endpoint}`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+      
+      if (response.data.success) {
+        setIsSaved(!isSaved);
+      }
+    } catch (error) {
+      console.error('Error saving livestock:', error);
+      if (error.response?.status === 401) {
+        navigate('/login');
+      } else {
+        alert('Failed to save listing. Please try again.');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleContact = (method) => {
     if (!livestock?.seller) return;
     
@@ -530,9 +570,6 @@ const LivestockDetail = () => {
     return bidHistory && bidHistory.length > 0;
   };
 
-  // Check if seller is verified
-  const isSellerVerified = livestock?.seller?.isVerified || false;
-
   if (loading) {
     return (
       <div className="ld_loading_container">
@@ -555,6 +592,7 @@ const LivestockDetail = () => {
     );
   }
 
+  const isSellerVerified = livestock.seller?.isVerified || false;
   const sellerRating = livestock.seller?.rating;
   const hasMultipleImages = livestock.images && livestock.images.length > 1;
   const displayImages = livestock.images?.filter((_, idx) => !imageErrors[idx]) || [];
@@ -570,6 +608,14 @@ const LivestockDetail = () => {
           <FaArrowLeft />
         </button>
         <div className="ld_header_actions">
+          <button 
+            className="ld_header_action" 
+            onClick={handleSave} 
+            aria-label="Save listing"
+            disabled={isSaving}
+          >
+            {isSaving ? <FaSpinner className="spinner" /> : (isSaved ? <FaHeartSolid className="ld_saved" /> : <FaRegHeart />)}
+          </button>
           <button className="ld_header_action" onClick={handleShare} aria-label="Share listing">
             <FaShareAlt />
           </button>
@@ -687,17 +733,6 @@ const LivestockDetail = () => {
             {(livestock.status || 'AVAILABLE').toUpperCase()}
           </div>
         </div>
-
-        {/* Verification Warning - Now in Details Tab */}
-        {!isSellerVerified && (
-          <div className="ld_warning_banner ld_warning_in_details">
-            <FaUserShield />
-            <div>
-              <strong>⚠️ Unverified Seller</strong>
-              <p>Please exercise caution when dealing with unverified sellers. Verify the seller's identity before making any payments.</p>
-            </div>
-          </div>
-        )}
 
         {/* Bid Timer - Show for bid listings */}
         {isBidType && !isSold && (
@@ -992,20 +1027,6 @@ const LivestockDetail = () => {
                       </div>
                     </div>
                   )}
-                  {/* Verification Status in Details */}
-                  <div className="ld_info_item">
-                    <FaUserShield className="ld_info_icon" />
-                    <div>
-                      <div className="ld_info_label">Seller Verification</div>
-                      <div className="ld_info_value">
-                        {isSellerVerified ? (
-                          <span style={{ color: '#38a169' }}>✅ Verified</span>
-                        ) : (
-                          <span style={{ color: '#dd6b20' }}>⚠️ Unverified</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
             </>
@@ -1014,6 +1035,25 @@ const LivestockDetail = () => {
           {/* Seller Tab */}
           {activeTab === 'seller' && livestock.seller && (
             <div className="ld_seller_section">
+              {/* Verification Status */}
+              {isSellerVerified ? (
+                <div className="ld_verified_banner">
+                  <FaUserCheck />
+                  <div>
+                    <strong>Verified Seller</strong>
+                    <p>This seller has been verified by Imfuyo</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="ld_warning_banner">
+                  <FaUserShield />
+                  <div>
+                    <strong>Unverified Seller</strong>
+                    <p>Please exercise caution when dealing with unverified sellers</p>
+                  </div>
+                </div>
+              )}
+
               {/* Seller Card */}
               <div className="ld_seller_card">
                 <div className="ld_seller_avatar">
